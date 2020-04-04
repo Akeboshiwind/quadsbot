@@ -20,7 +20,7 @@ fn repeated_chars(text: &str) -> usize {
 /// Format the input timestamp into HHMMSS format for easy 'check'ing
 fn format_date(timestamp: &i64) -> String {
     let date = Local.timestamp(*timestamp, 0);
-    date.format("%H%M%S").to_string()
+    date.format("%I%M%S").to_string()
 }
 
 /// Tests if n is quads
