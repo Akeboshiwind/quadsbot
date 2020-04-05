@@ -17,20 +17,42 @@ fn repeated_chars(text: &str) -> usize {
     count
 }
 
-/// Format the input timestamp into HHMMSS format for easy 'check'ing
-fn format_date(timestamp: &i64) -> String {
+#[derive(PartialEq, Debug)]
+enum Check {
+    Quads,
+    Sexts,
+    Other,
+}
+
+/// Perform a check on the input timestamp
+///
+/// If the timestamp starts four repeating numbers then it's Quads
+/// If the timestamp starts six repeating numbers then it's Sexts
+/// Otherwise then it's something else we don't care about
+///
+/// Checks in both 12h and 24h time formats
+fn check(timestamp: &i64) -> Check {
     let date = Local.timestamp(*timestamp, 0);
-    date.format("%I%M%S").to_string()
-}
 
-/// Tests if n is quads
-fn is_quads(n: usize) -> bool {
-    n >= 4
-}
+    let date_12h = date.format("%I%M%S").to_string();
+    let date_24h = date.format("%H%M%S").to_string();
 
-/// Tests if n is sexts
-fn is_sexts(n: usize) -> bool {
-    n >= 6
+    let n = {
+        let n_12h = repeated_chars(&date_12h);
+        let n_24h = repeated_chars(&date_24h);
+
+        if n_12h > n_24h {
+            n_12h
+        } else {
+            n_24h
+        }
+    };
+
+    match n {
+        4 | 5 => Check::Quads,
+        6 => Check::Sexts,
+        _ => Check::Other,
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -40,27 +62,26 @@ enum Action {
     None,
 }
 
+/// Work out the correct action to take for an input action
 fn process_message(message: &Message) -> Action {
-    if let MessageKind::Text { ref data, .. } = message.kind {
-        let date = format_date(&message.date);
+    let check = check(&message.date);
 
-        println!("{}@{}: {}", message.from.first_name, date, data);
-
-        let n = repeated_chars(&date);
-
-        if is_quads(n) {
-            let text_message = data.to_lowercase();
-            if let Some(text_message) = text_message.get(0..5) {
-                if (text_message == "quads" && is_quads(n))
-                    || (text_message == "sexts" && is_sexts(n))
-                {
-                    return Action::Reply;
+    match check {
+        Check::Quads | Check::Sexts => {
+            if let MessageKind::Text { ref data, .. } = message.kind {
+                let text_message = data.to_lowercase();
+                if let Some(text_message) = text_message.get(0..5) {
+                    if (text_message == "quads")
+                        || (text_message == "sexts" && check == Check::Sexts)
+                    {
+                        return Action::Reply;
+                    }
                 }
             }
-            return Action::None;
+            Action::None
         }
+        _ => Action::Delete,
     }
-    Action::Delete
 }
 
 /// Handle incoming messages
@@ -123,61 +144,43 @@ mod tests {
         }
     }
 
-    mod format_date {
+    mod check {
         use super::*;
 
         #[test]
         fn test_not_quads() {
             let timestamp = Local.ymd(2020, 1, 1).and_hms(1, 1, 1).timestamp();
-            assert_eq!(format_date(&timestamp), "010101");
+            assert_eq!(check(&timestamp), Check::Other);
         }
 
         #[test]
         fn test_morning_eleven_quads() {
             let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
-            assert_eq!(format_date(&timestamp), "111101");
+            assert_eq!(check(&timestamp), Check::Quads);
         }
 
         #[test]
         fn test_evening_eleven_quads() {
             let timestamp = Local.ymd(2020, 1, 1).and_hms(23, 11, 1).timestamp();
-            assert_eq!(format_date(&timestamp), "111101");
+            assert_eq!(check(&timestamp), Check::Quads);
         }
 
         #[test]
         fn test_evening_ten_quads() {
             let timestamp = Local.ymd(2020, 1, 1).and_hms(22, 22, 1).timestamp();
-            assert_eq!(format_date(&timestamp), "222201");
+            assert_eq!(check(&timestamp), Check::Quads);
         }
 
         #[test]
         fn test_midnight_quads() {
             let timestamp = Local.ymd(2020, 1, 1).and_hms(0, 0, 1).timestamp();
-            assert_eq!(format_date(&timestamp), "000001");
+            assert_eq!(check(&timestamp), Check::Quads);
         }
 
         #[test]
         fn test_sexts() {
             let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
-            assert_eq!(format_date(&timestamp), "111111");
-        }
-    }
-
-    mod format_then_check_repeated {
-        use super::*;
-
-        #[test]
-        fn test_end_to_end_quads() {
-            let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
-            let text = format_date(&timestamp);
-            assert_eq!(repeated_chars(&text), 4);
-        }
-
-        #[test]
-        fn test_end_to_end_sexts() {
-            let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
-            let text = format_date(&timestamp);
-            assert_eq!(repeated_chars(&text), 6);
+            assert_eq!(check(&timestamp), Check::Sexts);
         }
     }
 
