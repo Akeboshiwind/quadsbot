@@ -133,9 +133,27 @@ mod tests {
         }
 
         #[test]
-        fn test_quads() {
+        fn test_morning_eleven_quads() {
             let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
             assert_eq!(format_date(&timestamp), "111101");
+        }
+
+        #[test]
+        fn test_evening_eleven_quads() {
+            let timestamp = Local.ymd(2020, 1, 1).and_hms(23, 11, 1).timestamp();
+            assert_eq!(format_date(&timestamp), "111101");
+        }
+
+        #[test]
+        fn test_evening_ten_quads() {
+            let timestamp = Local.ymd(2020, 1, 1).and_hms(22, 22, 1).timestamp();
+            assert_eq!(format_date(&timestamp), "222201");
+        }
+
+        #[test]
+        fn test_midnight_quads() {
+            let timestamp = Local.ymd(2020, 1, 1).and_hms(0, 0, 1).timestamp();
+            assert_eq!(format_date(&timestamp), "000001");
         }
 
         #[test]
