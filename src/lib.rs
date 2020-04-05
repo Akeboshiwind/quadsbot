@@ -226,6 +226,14 @@ mod tests {
 
                 assert_eq!(process_message(&message), Action::Delete);
             }
+
+            #[test]
+            fn test_quads_not_on_quads() {
+                let timestamp = Local.ymd(2020, 1, 1).and_hms(1, 1, 1).timestamp();
+                let message = fake_message(timestamp, "quads".to_string());
+
+                assert_eq!(process_message(&message), Action::Delete);
+            }
         }
 
         mod action_none {
