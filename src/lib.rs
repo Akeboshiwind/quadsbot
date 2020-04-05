@@ -95,161 +95,188 @@ pub async fn handle_message(api: &Api, message: &Message) {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_repeated_chars_single_character() {
-        let text = "1";
-        assert_eq!(repeated_chars(&text), 1);
-    }
+    mod repeated_chars {
+        use super::*;
 
-    #[test]
-    fn test_repeated_chars_short_string() {
-        let text = "11111";
-        assert_eq!(repeated_chars(&text), 5);
-    }
+        #[test]
+        fn test_single_character() {
+            let text = "1";
+            assert_eq!(repeated_chars(&text), 1);
+        }
 
-    #[test]
-    fn test_repeated_chars_non_repeating() {
-        let text = "12131";
-        assert_eq!(repeated_chars(&text), 1);
-    }
+        #[test]
+        fn test_short_string() {
+            let text = "11111";
+            assert_eq!(repeated_chars(&text), 5);
+        }
 
-    #[test]
-    fn test_repeated_chars_short_repeating() {
-        let text = "1112131";
-        assert_eq!(repeated_chars(&text), 3);
-    }
+        #[test]
+        fn test_non_repeating() {
+            let text = "12131";
+            assert_eq!(repeated_chars(&text), 1);
+        }
 
-    #[test]
-    fn test_format_date_not_quads() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(1, 1, 1).timestamp();
-        assert_eq!(format_date(&timestamp), "010101");
-    }
-
-    #[test]
-    fn test_format_date_quads() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
-        assert_eq!(format_date(&timestamp), "111101");
-    }
-
-    #[test]
-    fn test_format_date_sexts() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
-        assert_eq!(format_date(&timestamp), "111111");
-    }
-
-    #[test]
-    fn test_end_to_end_quads() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
-        let text = format_date(&timestamp);
-        assert_eq!(repeated_chars(&text), 4);
-    }
-
-    #[test]
-    fn test_end_to_end_sexts() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
-        let text = format_date(&timestamp);
-        assert_eq!(repeated_chars(&text), 6);
-    }
-
-    use telegram_bot::{Group, MessageChat, User};
-
-    fn fake_message(timestamp: i64, text_message: String) -> Message {
-        Message {
-            id: 1.into(),
-            from: User {
-                id: 1.into(),
-                first_name: "Test User".to_string(),
-                last_name: None,
-                username: None,
-                is_bot: false,
-                language_code: None,
-            },
-            date: timestamp,
-            chat: MessageChat::Group(Group {
-                id: 1.into(),
-                title: "Test group".to_string(),
-                all_members_are_administrators: false,
-                invite_link: None,
-            }),
-            forward: None,
-            reply_to_message: None,
-            edit_date: None,
-            kind: MessageKind::Text {
-                data: text_message,
-                entities: vec![],
-            },
+        #[test]
+        fn test_short_repeating() {
+            let text = "1112131";
+            assert_eq!(repeated_chars(&text), 3);
         }
     }
 
-    #[test]
-    fn test_process_message_not_on_quads() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(1, 1, 1).timestamp();
-        let message = fake_message(timestamp, "Test Message".to_string());
+    mod format_date {
+        use super::*;
 
-        assert_eq!(process_message(&message), Action::Delete);
+        #[test]
+        fn test_not_quads() {
+            let timestamp = Local.ymd(2020, 1, 1).and_hms(1, 1, 1).timestamp();
+            assert_eq!(format_date(&timestamp), "010101");
+        }
+
+        #[test]
+        fn test_quads() {
+            let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
+            assert_eq!(format_date(&timestamp), "111101");
+        }
+
+        #[test]
+        fn test_sexts() {
+            let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
+            assert_eq!(format_date(&timestamp), "111111");
+        }
     }
 
-    #[test]
-    fn test_process_message_on_quads_not_checked() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
-        let message = fake_message(timestamp, "Test Message".to_string());
+    mod format_then_check_repeated {
+        use super::*;
 
-        assert_eq!(process_message(&message), Action::None);
+        #[test]
+        fn test_end_to_end_quads() {
+            let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
+            let text = format_date(&timestamp);
+            assert_eq!(repeated_chars(&text), 4);
+        }
+
+        #[test]
+        fn test_end_to_end_sexts() {
+            let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
+            let text = format_date(&timestamp);
+            assert_eq!(repeated_chars(&text), 6);
+        }
     }
 
-    #[test]
-    fn test_process_message_on_quads_checked_quads() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
-        let message = fake_message(timestamp, "quads".to_string());
+    mod process_message {
+        use super::*;
+        use telegram_bot::{Group, MessageChat, User};
 
-        assert_eq!(process_message(&message), Action::Reply);
-    }
+        fn fake_message(timestamp: i64, text_message: String) -> Message {
+            Message {
+                id: 1.into(),
+                from: User {
+                    id: 1.into(),
+                    first_name: "Test User".to_string(),
+                    last_name: None,
+                    username: None,
+                    is_bot: false,
+                    language_code: None,
+                },
+                date: timestamp,
+                chat: MessageChat::Group(Group {
+                    id: 1.into(),
+                    title: "Test group".to_string(),
+                    all_members_are_administrators: false,
+                    invite_link: None,
+                }),
+                forward: None,
+                reply_to_message: None,
+                edit_date: None,
+                kind: MessageKind::Text {
+                    data: text_message,
+                    entities: vec![],
+                },
+            }
+        }
 
-    #[test]
-    fn test_process_message_on_quads_checked_quads_with_different_casing() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
-        let message = fake_message(timestamp, "QuAdS".to_string());
+        mod action_delete {
+            use super::*;
 
-        assert_eq!(process_message(&message), Action::Reply);
-    }
+            #[test]
+            fn test_not_on_quads() {
+                let timestamp = Local.ymd(2020, 1, 1).and_hms(1, 1, 1).timestamp();
+                let message = fake_message(timestamp, "Test Message".to_string());
 
-    #[test]
-    fn test_process_message_on_quads_dont_check_sexts() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
-        let message = fake_message(timestamp, "sexts".to_string());
+                assert_eq!(process_message(&message), Action::Delete);
+            }
+        }
 
-        assert_eq!(process_message(&message), Action::None);
-    }
+        mod action_none {
+            use super::*;
 
-    #[test]
-    fn test_process_message_on_quads_check_begins_with_quads() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
-        let message = fake_message(timestamp, "quads".to_string());
+            #[test]
+            fn test_on_quads_not_checked() {
+                let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
+                let message = fake_message(timestamp, "Test Message".to_string());
 
-        assert_eq!(process_message(&message), Action::Reply);
-    }
+                assert_eq!(process_message(&message), Action::None);
+            }
 
-    #[test]
-    fn test_process_message_on_sexts_checked_quads() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
-        let message = fake_message(timestamp, "quads".to_string());
+            #[test]
+            fn test_on_quads_dont_check_sexts() {
+                let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
+                let message = fake_message(timestamp, "sexts".to_string());
 
-        assert_eq!(process_message(&message), Action::Reply);
-    }
+                assert_eq!(process_message(&message), Action::None);
+            }
 
-    #[test]
-    fn test_process_message_on_sexts_checked_sexts() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
-        let message = fake_message(timestamp, "sexts".to_string());
+            #[test]
+            fn test_on_sexts() {
+                let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
+                let message = fake_message(timestamp, "Test Message".to_string());
 
-        assert_eq!(process_message(&message), Action::Reply);
-    }
+                assert_eq!(process_message(&message), Action::None);
+            }
+        }
 
-    #[test]
-    fn test_process_message_on_sexts() {
-        let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
-        let message = fake_message(timestamp, "Test Message".to_string());
+        mod action_reply {
+            use super::*;
 
-        assert_eq!(process_message(&message), Action::None);
+            #[test]
+            fn test_on_quads_checked_quads() {
+                let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
+                let message = fake_message(timestamp, "quads".to_string());
+
+                assert_eq!(process_message(&message), Action::Reply);
+            }
+
+            #[test]
+            fn test_on_quads_checked_quads_with_different_casing() {
+                let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
+                let message = fake_message(timestamp, "QuAdS".to_string());
+
+                assert_eq!(process_message(&message), Action::Reply);
+            }
+
+            #[test]
+            fn test_on_quads_check_begins_with_quads() {
+                let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 1).timestamp();
+                let message = fake_message(timestamp, "quads".to_string());
+
+                assert_eq!(process_message(&message), Action::Reply);
+            }
+
+            #[test]
+            fn test_on_sexts_checked_quads() {
+                let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
+                let message = fake_message(timestamp, "quads".to_string());
+
+                assert_eq!(process_message(&message), Action::Reply);
+            }
+
+            #[test]
+            fn test_on_sexts_checked_sexts() {
+                let timestamp = Local.ymd(2020, 1, 1).and_hms(11, 11, 11).timestamp();
+                let message = fake_message(timestamp, "sexts".to_string());
+
+                assert_eq!(process_message(&message), Action::Reply);
+            }
+        }
     }
 }
