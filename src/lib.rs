@@ -1,3 +1,5 @@
+use log::{info, warn};
+
 use chrono::{Local, TimeZone};
 use telegram_bot::{prelude::*, Api, Message, MessageKind};
 
@@ -98,15 +100,19 @@ pub async fn handle_message(api: &Api, message: &Message) {
     let action = process_message(message);
 
     match action {
-        Action::None => {}
+        Action::None => info!("Message ignored"),
         Action::Reply => {
             if let Err(error) = api.send(message.text_reply("Checked")).await {
-                println!("Failed to reply to message with error: {:?}", error);
+                warn!("Failed to reply to message with error: {:?}", error);
+            } else {
+                info!("Replied to a \"checked\"")
             }
         }
         Action::Delete => {
             if let Err(error) = api.send(message.delete()).await {
-                println!("Failed to delete message with error: {:?}", error);
+                warn!("Failed to delete message with error: {:?}", error);
+            } else {
+                info!("Deleted a message not sent on quads :(")
             }
         }
     }
