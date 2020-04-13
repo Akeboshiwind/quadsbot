@@ -15,7 +15,8 @@ FROM arm32v6/alpine
 
 # Install runtime deps
 RUN apk add --no-cache \
-    'openssl-dev=1.1.1d-r3'
+    'openssl-dev=1.1.1d-r3' \
+    'libgcc=9.2.0-r4'
 
 # Copy binary
 COPY --from=builder /usr/src/myapp/target/release/quadsbot /quadsbot

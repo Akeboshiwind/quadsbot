@@ -1,0 +1,8 @@
+# Ignore everything
+*
+
+# Allow files and directories
+!/Cargo.toml
+!/Cargo.lock
+!/src/**
+
