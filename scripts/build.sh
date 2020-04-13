@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# TODO: Cleanup the file into functions?
 
 
 # >> Utils
@@ -19,11 +20,17 @@ log() {
            "${3:-->}" "${2:+\033[1;36m}" "$1" "$2" >&2
 }
 
-random_string() {
-    length=${1:-20}
+usage() {
+    cat << USAGE
+Usage: build.sh [OPTIONS]
 
-    # LC_CTYPE gets rid of an error in tr: https://unix.stackexchange.com/a/45406
-    head /dev/urandom | LC_CTYPE=C tr -dc A-Za-z0-9_ | head -c $length
+When no options are provided, builds the docker images for the project normally
+
+Options:
+    --clean       Clean up the build cruft then exit
+
+    -h, --help    Prints this help message
+USAGE
 }
 
 
@@ -37,24 +44,38 @@ random_string() {
 
 
 
+# >> Dommand line input
+
+builder_name="builder-quadsbot"
+
+while [ "$1" != "" ]; do
+    case $1 in
+        --clean )     log "cleanup" "Removeing builder $builder_name"
+                      docker buildx rm $builder_name
+                      exit
+                      ;;
+        -h | --help ) usage
+                      exit
+                      ;;
+        * )           break
+    esac
+done
+
+
+
 # >> Setup docker builder
 
-builder_name="builder-$(random_string)"
 
-log "setup_build_env" "Creating builder: $builder_name"
-docker buildx create --name $builder_name
+[ -z "$(docker buildx ls | grep "$builder_name")" ] && {
+    log "setup_build_env" "Builder does not exist"
 
-cleanup_builder() {
-    log "cleanup_builder" "Deleting builder: $builder_name"
-    docker buildx rm $builder_name
+    log "setup_build_env" "Creating builder: $builder_name"
+    docker buildx create --name $builder_name
+
+    log "setup_build_env" "Use and setup $builder_name"
+    docker buildx use $builder_name
+    docker buildx inspect --bootstrap
 }
-
-trap cleanup_builder EXIT
-
-log "setup_build_env" "Use and setup $builder_name"
-
-docker buildx use $builder_name
-docker buildx inspect --bootstrap
 
 
 
