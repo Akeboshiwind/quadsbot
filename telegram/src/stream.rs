@@ -1,8 +1,10 @@
-use json::JsonValue;
-use std::time::Duration;
+use crate::api::Api;
+use crate::errors::ApiError;
+use crate::types::Update;
 
-use crate::{Api, ApiError, Update};
+use json::JsonValue;
 use log::{debug, error};
+use std::time::Duration;
 
 pub struct UpdateStreamIter<'api> {
     api: &'api Api,
