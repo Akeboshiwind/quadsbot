@@ -1,7 +1,7 @@
 use log::{info, warn};
 
 use chrono::{Local, TimeZone};
-use telegram_bot::{prelude::*, Api, Message, MessageKind};
+use telegram::{Api, Message};
 
 /// Return how many times the first character is repeated in a row
 fn repeated_chars(text: &str) -> usize {
@@ -70,7 +70,7 @@ fn process_message(message: &Message) -> Action {
 
     match check {
         Check::Quads | Check::Sexts => {
-            if let MessageKind::Text { ref data, .. } = message.kind {
+            if let Some(ref data) = message.text {
                 let text_message = data.to_lowercase();
                 if let Some(text_message) = text_message.get(0..5) {
                     if (text_message == "quads")
@@ -96,20 +96,22 @@ fn process_message(message: &Message) -> Action {
 ///
 /// If a message matches 'sexts' and is sent on 'sexts' then the bot will reply
 /// to the message with 'checked'
-pub async fn handle_message(api: &Api, message: &Message) {
+pub fn handle_message(api: &Api, message: &Message) {
     let action = process_message(message);
 
     match action {
         Action::None => info!("Message ignored"),
         Action::Reply => {
-            if let Err(error) = api.send(message.text_reply("Checked")).await {
+            if let Err(error) =
+                api.send_message(message.chat.id, "Checked".into(), Some(message.message_id))
+            {
                 warn!("Failed to reply to message with error: {:?}", error);
             } else {
                 info!("Replied to a \"checked\"")
             }
         }
         Action::Delete => {
-            if let Err(error) = api.send(message.delete()).await {
+            if let Err(error) = api.delete_message(message.chat.id, message.message_id) {
                 warn!("Failed to delete message with error: {:?}", error);
             } else {
                 info!("Deleted a message not sent on quads :(")
@@ -192,34 +194,22 @@ mod tests {
 
     mod process_message {
         use super::*;
-        use telegram_bot::{Group, MessageChat, User};
+        use telegram::Message;
 
         fn fake_message(timestamp: i64, text_message: String) -> Message {
-            Message {
-                id: 1.into(),
-                from: User {
-                    id: 1.into(),
+            Message::new(json::object! {
+                message_id: 1,
+                from: json::object!{
+                    id: 1,
                     first_name: "Test User".to_string(),
-                    last_name: None,
-                    username: None,
-                    is_bot: false,
-                    language_code: None,
                 },
                 date: timestamp,
-                chat: MessageChat::Group(Group {
-                    id: 1.into(),
-                    title: "Test group".to_string(),
-                    all_members_are_administrators: false,
-                    invite_link: None,
-                }),
-                forward: None,
-                reply_to_message: None,
-                edit_date: None,
-                kind: MessageKind::Text {
-                    data: text_message,
-                    entities: vec![],
+                chat: json::object! {
+                    id: 1,
                 },
-            }
+                text: Some(text_message),
+            })
+            .unwrap()
         }
 
         mod action_delete {

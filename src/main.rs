@@ -1,15 +1,12 @@
 use log::info;
-use pretty_env_logger;
 use std::env;
 
-use futures::StreamExt;
-use telegram_bot::{Api, Error, UpdateKind};
+use telegram::Api;
 
 use quadsbot::*;
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    pretty_env_logger::init();
+fn main() {
+    env_logger::init();
 
     let pkg_version = env!("CARGO_PKG_VERSION");
     info!("QuadsBot v{}", pkg_version);
@@ -18,15 +15,10 @@ async fn main() -> Result<(), Error> {
     let api = Api::new(token);
 
     info!("Start listening for events...");
-    let mut stream = api.stream();
-    while let Some(update) = stream.next().await {
+    for update in api.stream() {
         // If the received update contains a new message...
-        if let Ok(update) = update {
-            if let UpdateKind::Message(message) = update.kind {
-                handle_message(&api, &message).await;
-            }
+        if let Some(message) = update.message {
+            handle_message(&api, &message);
         }
     }
-
-    Ok(())
 }

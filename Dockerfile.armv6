@@ -2,8 +2,8 @@ FROM arm32v6/alpine as builder
 
 # Install build deps
 RUN apk add --no-cache \
-    'cargo=1.39.0-r0' \
-    'openssl-dev=1.1.1d-r3'
+    'cargo' \
+    'openssl-dev'
 
 # Build app
 WORKDIR /usr/src/myapp
@@ -15,9 +15,9 @@ FROM arm32v6/alpine
 
 # Install runtime deps
 RUN apk add --no-cache \
-    'openssl-dev=1.1.1d-r3' \
-    'libgcc=9.2.0-r4' \
-    'tzdata=2019c-r0'
+    'openssl-dev' \
+    'libgcc' \
+    'tzdata'
 
 # Set timezone to BST
 ENV TZ Europe/London
