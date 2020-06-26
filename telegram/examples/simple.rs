@@ -5,7 +5,7 @@ fn main() {
 
     let api_key = env::var("API_KEY").expect("API_KEY must be set for this example to work");
 
-    let api = telegram::Api::new(&api_key);
+    let api = telegram::Api::new(api_key);
 
     for update in api.stream() {
         if let Some(message) = update.message {
