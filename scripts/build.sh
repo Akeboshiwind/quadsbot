@@ -44,7 +44,7 @@ USAGE
 
 
 
-# >> Dommand line input
+# >> Command line input
 
 builder_name="builder-quadsbot"
 
@@ -57,7 +57,8 @@ while [ "$1" != "" ]; do
         -h | --help ) usage
                       exit
                       ;;
-        * )           break
+        * )           log "arg_parsing" "Invalid argument: $1"
+                      exit
     esac
 done
 
