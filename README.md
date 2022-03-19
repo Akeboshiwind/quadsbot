@@ -6,7 +6,8 @@ A silly bot for my friend group's chat group in telegram
 
 ```bash
 $ export TELEGRAM_BOT_TOKEN="<your token here>"
-$ quadsbot
+$ poetry install
+$ poetry run python main.py
 ```
 
 ## Features
