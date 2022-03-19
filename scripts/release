@@ -1,0 +1,33 @@
+#!/bin/sh
+
+# >> Configure
+
+# Print commmands as they're run
+set -x
+
+
+
+# >> Get version
+
+# The `gsub` strips the double quotes
+# The $3 prints the third thing separated by spaces
+# NOTE: required spaces between values
+version="$(awk '/^version/ { gsub(/"/, "", $3); print $3 }' pyproject.toml)"
+
+
+
+# >> Docker Build & Deploy
+
+image="akeboshiwind/quadsbot"
+docker build . \
+    -t "$image:latest" \
+    -t "$image:$version"
+
+docker push $image --all-tags
+
+
+
+# >> Git Tag
+
+git tag $version
+git push --tags
