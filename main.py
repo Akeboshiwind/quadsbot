@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 # Formats the date as a series of human readable numbers
 # 2020-10-22T12:51:24 -> 20201022125124
 format_string = '%Y%m%d%H%M%S'
+format_string_12_hour = '%Y%m%d%I%M%S'
 
 # A list of tuples
 # The first value is a regex matcher for the above time format
@@ -33,11 +34,13 @@ matchers = [
 def check(update: Update, context: CallbackContext) -> None:
     # NOTE: I'm not sure if this will handle timezones nicely
     date_digits = update.message.date.strftime(format_string)
+    date_digits_12_hour = update.message.date.strftime(format_string_12_hour)
 
     # Iterate over potential matches
     for (date_re, message_re) in matchers:
         # If matches date regex *and* message regex, then reply
-        if re.search(date_re, date_digits):
+        if re.search(date_re, date_digits) or \
+                re.search(date_re, date_digits_12_hour):
             message_text = update.message.text.lower()
             if re.search(message_re, message_text):
                 update.message.reply_text("Checked", quote=True)
