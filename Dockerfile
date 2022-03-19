@@ -1,28 +1,18 @@
-FROM alpine as builder
+FROM python:3.10
 
-# Install build deps
-RUN apk add --no-cache \
-    'cargo' \
-    'openssl-dev'
+WORKDIR /app
 
-# Build app
-WORKDIR /usr/src/myapp
-COPY . .
-RUN cargo build --release
+# Install poetry
+RUN pip3 install poetry
 
-
-FROM alpine
-
-# Install runtime deps
-RUN apk add --no-cache \
-    'openssl-dev' \
-    'libgcc' \
-    'tzdata'
+# Install deps
+COPY pyproject.toml poetry.lock .
+RUN poetry install --no-dev
 
 # Set timezone to BST
 ENV TZ Europe/London
 
-# Copy binary
-COPY --from=builder /usr/src/myapp/target/release/quadsbot /quadsbot
+# Add source
+COPY . .
 
-CMD ["/quadsbot"]
+CMD poetry run python main.py

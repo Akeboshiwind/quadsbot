@@ -1,3 +1,9 @@
-# Ignore target and git directories
-target
+# Python stuff
+*.pyc
+*.pyo
+*.pyd
+.cache
+.ropeproject
+
+# Other
 .git
