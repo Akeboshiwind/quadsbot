@@ -32,6 +32,9 @@ matchers = [
 
 
 def check(update: Update, context: CallbackContext) -> None:
+    # We only delete messages when none of the matchers match
+    delete_message = True
+
     # NOTE: I'm not sure if this will handle timezones nicely
     date_digits = update.message.date.strftime(format_string)
     date_digits_12_hour = update.message.date.strftime(format_string_12_hour)
@@ -41,12 +44,14 @@ def check(update: Update, context: CallbackContext) -> None:
         # If matches date regex *and* message regex, then reply
         if re.search(date_re, date_digits) or \
                 re.search(date_re, date_digits_12_hour):
+            delete_message = False
             message_text = update.message.text.lower()
             if re.search(message_re, message_text):
                 update.message.reply_text("Checked", quote=True)
                 return
 
-    update.message.delete()
+    if delete_message:
+        update.message.delete()
 
 
 def main() -> None:
