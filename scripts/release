@@ -23,7 +23,8 @@ docker build . \
     -t "$image:latest" \
     -t "$image:$version"
 
-docker push $image --all-tags
+docker push "$image:$version"
+docker push "$image:latest"
 
 
 
