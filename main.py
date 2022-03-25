@@ -24,10 +24,11 @@ format_string_12_hour = '%Y%m%d%I%M%S'
 #
 # The first one that matches is replied to with "Checked"
 matchers = [
-    (r'(\d)\1{3}', "quads"),
-    (r'(\d)\1{5}', "sexts"),
-    (r'(\d)\1{7}', "octs"),
-    (r'11235?8?', "fibs"),
+    (r'(\d)\1{3}', "quads"),        # 2022-03-01T22:22:00
+    (r'(\d)\1{5}', "sexts"),        # 2022-03-01T22:22:22
+    (r'(\d)\1{7}', "octs"),         # 2022-03-22T22:22:22
+    (r'(\d)\1{9}', "decs"),         # 2022-11-11T11:11:11
+    (r'11235?8?(13)?', "fibs"),     # 2022-03-11T23:58:13
 ]
 
 
