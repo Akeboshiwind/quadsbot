@@ -1,6 +1,7 @@
 import logging
 import re
 import os
+from enum import Enum
 
 from telegram import Update
 from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
@@ -15,8 +16,11 @@ logger = logging.getLogger(__name__)
 
 # Formats the date as a series of human readable numbers
 # 2020-10-22T12:51:24 -> 20201022125124
-format_string = '%Y%m%d%H%M%S'
-format_string_12_hour = '%Y%m%d%I%M%S'
+# NOTE: I'm not sure if this will handle timezones nicely
+format_strings = [
+    '%Y%m%d%H%M%S',  # 24 hour
+    '%Y%m%d%I%M%S',  # 12 hour
+]
 
 # A list of tuples
 # The first value is a regex matcher for the above time format
@@ -31,37 +35,70 @@ matchers = [
     (r'11235?8?(13)?', "fibs"),     # 2022-03-11T23:58:13
 ]
 
+State = Enum("State", "DELETE PASS CHECKED")
 
-def check(update: Update, context: CallbackContext) -> None:
-    # We only delete messages when none of the matchers match
+
+def check(dates: list[int], message_text: str) -> State:
+    """
+    Calculate what to do with the given message.
+
+    If one of the provided `dates` (in digit form) matches one of the matchers
+    AND the `message_text` matches that same matcher.
+    Then we want to reply "Checked".
+
+    If one of the dates matches, but the text doesn't we want to neither reply,
+    nor delete the message.
+
+    If neither the message, nor the date matches. Then we want to delete the
+    message.
+
+    This is reflected in the output state as CHECKED, PASS and DELETE.
+    """
     delete_message = True
 
-    # NOTE: I'm not sure if this will handle timezones nicely
-    date_digits = update.message.date.strftime(format_string)
-    date_digits_12_hour = update.message.date.strftime(format_string_12_hour)
+    message_text = message_text.lower()
 
-    # Iterate over potential matches
     for (date_re, message_re) in matchers:
-        # If matches date regex *and* message regex, then reply
-        if re.search(date_re, date_digits) or \
-                re.search(date_re, date_digits_12_hour):
-            delete_message = False
-            message_text = update.message.text.lower()
-            if re.search(message_re, message_text):
-                update.message.reply_text("Checked", quote=True)
-                return
+        for date_digits in dates:
+            if re.search(date_re, date_digits):
+                delete_message = False
+                if re.search(message_re, message_text):
+                    return State.CHECKED
 
     if delete_message:
+        return State.DELETE
+    else:
+        return State.PASS
+
+
+def handle_message(update: Update, context: CallbackContext) -> None:
+    """
+    Given a text message, plans what to do with it. Then executes that plan.
+    """
+    dates = [
+        update.message.date.strftime(format_string)
+        for format_string in format_strings
+    ]
+
+    state = check(dates, update.message.text)
+
+    if state == State.CHECKED:
+        update.message.reply_text("Checked", quote=True)
+    elif state == State.DELETE:
         update.message.delete()
+    elif state == State.PASS:
+        pass
 
 
 def main() -> None:
     updater = Updater(os.environ["TELEGRAM_BOT_TOKEN"])
 
     dispatcher = updater.dispatcher
+
     dispatcher.add_handler(MessageHandler(
-        Filters.text & ~Filters.update.edited_message,
-        check))
+        Filters.text
+        & ~Filters.update.edited_message,
+        handle_message))
 
     # Start the Bot
     updater.start_polling()
