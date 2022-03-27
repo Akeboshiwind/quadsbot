@@ -4,7 +4,13 @@ import os
 from enum import Enum
 
 from telegram import Update
-from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
+from telegram.ext import (
+    Updater,
+    MessageHandler,
+    CommandHandler,
+    Filters,
+    CallbackContext,
+)
 import pytz
 
 # Enable logging
@@ -96,8 +102,15 @@ def message_handler(update: Update, context: CallbackContext) -> None:
         pass
 
 
+def stats_handler(update: Update, context: CallbackContext) -> None:
+    """
+    Given a text message, plans what to do with it. Then executes that plan.
+    """
+    update.message.reply_text(f"Date strings: {get_date_strings(update.message.date)}")
+
+
 def main() -> None:
-    updater = Updater(os.environ["TELEGRAM_BOT_TOKEN"])
+    updater = Updater(token=os.environ["TELEGRAM_BOT_TOKEN"])
 
     dispatcher = updater.dispatcher
 
@@ -108,6 +121,10 @@ def main() -> None:
             & ~Filters.chat_type.private,
             message_handler,
         )
+    )
+
+    dispatcher.add_handler(
+        CommandHandler("stats", stats_handler, Filters.chat_type.private)
     )
 
     # Start the Bot
