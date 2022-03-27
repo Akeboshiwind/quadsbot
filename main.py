@@ -15,8 +15,7 @@ import pytz
 
 # Enable logging
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
 logger = logging.getLogger(__name__)
@@ -25,8 +24,8 @@ logger = logging.getLogger(__name__)
 # 2020-10-22T12:51:24 -> 20201022125124
 # NOTE: I'm not sure if this will handle timezones nicely
 format_strings = [
-    '%Y%m%d%H%M%S',  # 24 hour
-    '%Y%m%d%I%M%S',  # 12 hour
+    "%Y%m%d%H%M%S",  # 24 hour
+    "%Y%m%d%I%M%S",  # 12 hour
 ]
 tz = pytz.timezone(os.environ.get("TZ", "Europe/London"))
 
@@ -44,11 +43,11 @@ def get_date_strings(date) -> list[int]:
 #
 # The first one that matches is replied to with "Checked"
 matchers = [
-    (r'(\d)\1{3}', "quads"),        # 2022-03-01T22:22:00
-    (r'(\d)\1{5}', "sexts"),        # 2022-03-01T22:22:22
-    (r'(\d)\1{7}', "octs"),         # 2022-03-22T22:22:22
-    (r'(\d)\1{9}', "decs"),         # 2022-11-11T11:11:11
-    (r'11235?8?(13)?', "fibs"),     # 2022-03-11T23:58:13
+    (r"(\d)\1{3}", "quads"),  # 2022-03-01T22:22:00
+    (r"(\d)\1{5}", "sexts"),  # 2022-03-01T22:22:22
+    (r"(\d)\1{7}", "octs"),  # 2022-03-22T22:22:22
+    (r"(\d)\1{9}", "decs"),  # 2022-11-11T11:11:11
+    (r"11235?8?(13)?", "fibs"),  # 2022-03-11T23:58:13
 ]
 
 State = Enum("State", "DELETE PASS CHECKED")
@@ -116,9 +115,7 @@ def main() -> None:
 
     dispatcher.add_handler(
         MessageHandler(
-            Filters.text
-            & ~Filters.update.edited_message
-            & ~Filters.chat_type.private,
+            Filters.text & ~Filters.update.edited_message & ~Filters.chat_type.private,
             message_handler,
         )
     )
@@ -136,5 +133,5 @@ def main() -> None:
     updater.idle()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
