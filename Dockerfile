@@ -9,9 +9,6 @@ RUN pip3 install poetry
 COPY pyproject.toml poetry.lock .
 RUN poetry install --no-dev
 
-# Set timezone to BST
-ENV TZ Europe/London
-
 # Add source
 COPY . .
 

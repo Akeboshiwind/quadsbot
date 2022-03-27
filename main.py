@@ -5,6 +5,7 @@ from enum import Enum
 
 from telegram import Update
 from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
+import pytz
 
 # Enable logging
 logging.basicConfig(
@@ -21,6 +22,15 @@ format_strings = [
     '%Y%m%d%H%M%S',  # 24 hour
     '%Y%m%d%I%M%S',  # 12 hour
 ]
+tz = pytz.timezone(os.environ.get("TZ", "Europe/London"))
+
+
+def get_date_strings(date) -> list[int]:
+    # Convert date to bot timezone
+    date = date.astimezone(tz)
+
+    return [date.strftime(format_string) for format_string in format_strings]
+
 
 # A list of tuples
 # The first value is a regex matcher for the above time format
@@ -71,15 +81,11 @@ def check(dates: list[int], message_text: str) -> State:
         return State.PASS
 
 
-def handle_message(update: Update, context: CallbackContext) -> None:
+def message_handler(update: Update, context: CallbackContext) -> None:
     """
     Given a text message, plans what to do with it. Then executes that plan.
     """
-    dates = [
-        update.message.date.strftime(format_string)
-        for format_string in format_strings
-    ]
-
+    dates = get_date_strings(update.message.date)
     state = check(dates, update.message.text)
 
     if state == State.CHECKED:
@@ -95,10 +101,14 @@ def main() -> None:
 
     dispatcher = updater.dispatcher
 
-    dispatcher.add_handler(MessageHandler(
-        Filters.text
-        & ~Filters.update.edited_message,
-        handle_message))
+    dispatcher.add_handler(
+        MessageHandler(
+            Filters.text
+            & ~Filters.update.edited_message
+            & ~Filters.chat_type.private,
+            message_handler,
+        )
+    )
 
     # Start the Bot
     updater.start_polling()
