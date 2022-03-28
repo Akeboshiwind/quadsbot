@@ -43,11 +43,14 @@ def get_date_strings(date) -> list[int]:
 #
 # The first one that matches is replied to with "Checked"
 matchers = [
-    (r"(\d)\1{3}", "quads"),  # 2022-03-01T22:22:00
-    (r"(\d)\1{5}", "sexts"),  # 2022-03-01T22:22:22
-    (r"(\d)\1{7}", "octs"),  # 2022-03-22T22:22:22
-    (r"(\d)\1{9}", "decs"),  # 2022-11-11T11:11:11
+    (r"^........(.)\1{3}", "quads"),  # 2022-03-01T22:22:00
+    (r"^........(.)\1{5}", "sexts"),  # 2022-03-01T22:22:22
+    (r"^......(.)\1{7}", "octs"),  # 2022-03-22T22:22:22
+    (r"^....(.)\1{9}", "decs"),  # 2022-11-11T11:11:11
+    (r"^..(.)\1{11}", "dodecs"),  # 2011-11-11T11:11:11
+    # TODO: Disable after april fools
     (r"11235?8?(13)?", "fibs"),  # 2022-03-11T23:58:13
+    (r"12345?6?7?", "incs"),  # 2022-03-11T23:45:67
 ]
 
 State = Enum("State", "DELETE PASS CHECKED")
