@@ -153,6 +153,7 @@ def stats_handler(update: Update, context: CallbackContext) -> None:
     """
     Given a text message, plans what to do with it. Then executes that plan.
     """
+    logger.info("/stats call")
     update.message.reply_text(
         f"Date strings: {get_date_strings(update.message.date)}"
         f"\nStats: {json.dumps(context.bot_data)}"
