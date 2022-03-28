@@ -1,7 +1,9 @@
 import logging
 import re
 import os
+import json
 from enum import Enum
+from typing import Tuple, Optional
 
 from telegram import Update
 from telegram.ext import (
@@ -10,6 +12,7 @@ from telegram.ext import (
     CommandHandler,
     Filters,
     CallbackContext,
+    PicklePersistence,
 )
 import pytz
 
@@ -56,7 +59,7 @@ matchers = [
 State = Enum("State", "DELETE PASS CHECKED")
 
 
-def check(dates: list[int], message_text: str) -> State:
+def check(dates: list[int], message_text: str) -> Tuple[State, Optional[str]]:
     """
     Calculate what to do with the given message.
 
@@ -78,15 +81,24 @@ def check(dates: list[int], message_text: str) -> State:
 
     for (date_re, message_re) in matchers:
         for date_digits in dates:
-            if re.search(date_re, date_digits):
+            date_match = re.search(date_re, date_digits)
+            if date_match:
                 delete_message = False
                 if re.search(message_re, message_text):
-                    return State.CHECKED
+                    # Extract the prefix of the match
+                    # The string upto the end of the match
+                    # This is useful for de-duping checks later on
+                    date_prefix = message_text[: date_match.end()]
+
+                    # Return:
+                    # - The message_re as a key
+                    # - The date prefix to help dedupe checks in the stats
+                    return State.CHECKED, (message_re, date_prefix)
 
     if delete_message:
-        return State.DELETE
+        return State.DELETE, None
     else:
-        return State.PASS
+        return State.PASS, None
 
 
 def message_handler(update: Update, context: CallbackContext) -> None:
@@ -94,28 +106,69 @@ def message_handler(update: Update, context: CallbackContext) -> None:
     Given a text message, plans what to do with it. Then executes that plan.
     """
     dates = get_date_strings(update.message.date)
-    state = check(dates, update.message.text)
+    state, check_info = check(dates, update.message.text)
+
+    user_stats = context.bot_data.get(
+        update.message.from_user.id,
+        {
+            "checked_total": 0,
+            "checked_unique": 0,
+            "deleted": 0,
+            "passed": 0,
+            "messages_total": 0,
+        },
+    )
 
     if state == State.CHECKED:
+        user_stats["checked_total"] += 1
+
+        # Unpack check_info
+        (matcher, date_prefix) = check_info
+
+        # Dedupe checks
+        matched_prefixes = context.user_data.get(matcher, [])
+        if date_prefix not in matched_prefixes:
+            user_stats["checked_unique"] += 1
+
+            matched_prefixes.append(date_prefix)
+            context.user_data[matcher] = matched_prefixes
+
         logger.info(f"Checked `{dates}` with `{matcher}`")
         update.message.reply_text("Checked", quote=True)
     elif state == State.DELETE:
+        user_stats["deleted"] += 1
         logger.info("Deleted Message")
         update.message.delete()
     elif state == State.PASS:
+        user_stats["passed"] += 1
         logger.info("Passed")
         pass
+
+    user_stats["messages_total"] += 1
+
+    context.bot_data[update.message.from_user.id] = user_stats
 
 
 def stats_handler(update: Update, context: CallbackContext) -> None:
     """
     Given a text message, plans what to do with it. Then executes that plan.
     """
-    update.message.reply_text(f"Date strings: {get_date_strings(update.message.date)}")
+    update.message.reply_text(
+        f"Date strings: {get_date_strings(update.message.date)}"
+        f"\nStats: {json.dumps(context.bot_data)}"
+    )
 
 
 def main() -> None:
-    updater = Updater(token=os.environ["TELEGRAM_BOT_TOKEN"])
+    # Here we use persistence to store stats that we use to calculate the leaderboard
+    # and debug
+    # We don't store `user_data` as we want that to just be a temporary store for
+    # de-duping purposes
+    persistence_location = os.environ.get("PERSISTENCE_FILE", "/data/stats")
+    persistence = PicklePersistence(
+        filename=persistence_location, store_user_data=False
+    )
+    updater = Updater(token=os.environ["TELEGRAM_BOT_TOKEN"], persistence=persistence)
 
     dispatcher = updater.dispatcher
 
