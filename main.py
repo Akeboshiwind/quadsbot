@@ -111,6 +111,7 @@ def message_handler(update: Update, context: CallbackContext) -> None:
     user_stats = context.bot_data.get(
         update.message.from_user.id,
         {
+            "username": update.effective_user.username,
             "checked_total": 0,
             "checked_unique": 0,
             "deleted": 0,
@@ -145,6 +146,7 @@ def message_handler(update: Update, context: CallbackContext) -> None:
         pass
 
     user_stats["messages_total"] += 1
+    user_stats["username"] = update.effective_user.username
 
     context.bot_data[update.message.from_user.id] = user_stats
 
@@ -170,6 +172,37 @@ def clear_handler(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(f"\nStats: {json.dumps(context.bot_data)}")
 
 
+def leaderboard_handler(update: Update, context: CallbackContext) -> None:
+    """
+    Clears the stored stats
+    """
+    logger.info("/leaderboard call")
+
+    score_field = "checked_unique"
+    scores = [score for _, score in context.bot_data.items()]
+    scores = sorted(scores, key=lambda s: s[score_field], reverse=True)
+
+    message = "<b>Leaderboard</b>\n"
+
+    if len(scores) >= 1:
+        top = scores[0]
+        top_score = top[score_field]
+        top_user = top['username']
+
+        message += f"1. {top_score} - 👑 <b>{top_user}</b> 👑"
+
+        for idx, entry in enumerate(scores[1:]):
+            # Convert to correct numbering
+            idx += 2
+            score = entry[score_field]
+            user = entry['username']
+            message += f"\n{idx}. {score} - {user}"
+    else:
+        message += "<i>Empty...</i>"
+
+    update.message.reply_html(message)
+
+
 def main() -> None:
     # Here we use persistence to store stats that we use to calculate the leaderboard
     # and debug
@@ -192,6 +225,10 @@ def main() -> None:
 
     dispatcher.add_handler(
         CommandHandler("stats", stats_handler, Filters.chat_type.private)
+    )
+
+    dispatcher.add_handler(
+        CommandHandler("leaderboard", leaderboard_handler, Filters.chat_type.private)
     )
 
     dispatcher.add_handler(
