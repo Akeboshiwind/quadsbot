@@ -97,10 +97,13 @@ def message_handler(update: Update, context: CallbackContext) -> None:
     state = check(dates, update.message.text)
 
     if state == State.CHECKED:
+        logger.info(f"Checked `{dates}` with `{matcher}`")
         update.message.reply_text("Checked", quote=True)
     elif state == State.DELETE:
+        logger.info("Deleted Message")
         update.message.delete()
     elif state == State.PASS:
+        logger.info("Passed")
         pass
 
 
