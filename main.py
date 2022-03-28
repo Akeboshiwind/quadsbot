@@ -160,6 +160,16 @@ def stats_handler(update: Update, context: CallbackContext) -> None:
     )
 
 
+def clear_handler(update: Update, context: CallbackContext) -> None:
+    """
+    Clears the stored stats
+    """
+    logger.info("/clear call")
+    context.user_data.clear()
+    context.bot_data.clear()
+    update.message.reply_text(f"\nStats: {json.dumps(context.bot_data)}")
+
+
 def main() -> None:
     # Here we use persistence to store stats that we use to calculate the leaderboard
     # and debug
@@ -182,6 +192,10 @@ def main() -> None:
 
     dispatcher.add_handler(
         CommandHandler("stats", stats_handler, Filters.chat_type.private)
+    )
+
+    dispatcher.add_handler(
+        CommandHandler("clear", clear_handler, Filters.chat_type.private)
     )
 
     # Start the Bot
