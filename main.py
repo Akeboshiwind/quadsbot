@@ -101,7 +101,7 @@ def check(dates: list[int], message_text: str) -> Tuple[State, Optional[str]]:
         return State.PASS, None
 
 
-def message_handler(update: Update, context: CallbackContext) -> None:
+def message_handler(update: Update, context: CallbackContext) -> State:
     """
     Given a text message, plans what to do with it. Then executes that plan.
     """
@@ -150,6 +150,8 @@ def message_handler(update: Update, context: CallbackContext) -> None:
 
     context.bot_data[update.message.from_user.id] = user_stats
 
+    return state
+
 
 def stats_handler(update: Update, context: CallbackContext) -> None:
     """
@@ -174,9 +176,17 @@ def clear_handler(update: Update, context: CallbackContext) -> None:
 
 def leaderboard_handler(update: Update, context: CallbackContext) -> None:
     """
-    Clears the stored stats
+    Display a leaderboard of scores
     """
     logger.info("/leaderboard call")
+
+    if update.message.chat.type != "private":
+        # Process the message as normal in a channel
+        state = message_handler(update, context)
+
+        # Only output the leaderboard if the messages wouldn't be deleted
+        if state == State.DELETE:
+            return
 
     score_field = "checked_unique"
     scores = [score for _, score in context.bot_data.items()]
@@ -217,6 +227,10 @@ def main() -> None:
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(
+        CommandHandler("leaderboard", leaderboard_handler)
+    )
+
+    dispatcher.add_handler(
         MessageHandler(
             Filters.text & ~Filters.update.edited_message & ~Filters.chat_type.private,
             message_handler,
@@ -227,9 +241,6 @@ def main() -> None:
         CommandHandler("stats", stats_handler, Filters.chat_type.private)
     )
 
-    dispatcher.add_handler(
-        CommandHandler("leaderboard", leaderboard_handler, Filters.chat_type.private)
-    )
 
     dispatcher.add_handler(
         CommandHandler("clear", clear_handler, Filters.chat_type.private)
