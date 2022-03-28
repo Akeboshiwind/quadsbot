@@ -197,7 +197,7 @@ def leaderboard_handler(update: Update, context: CallbackContext) -> None:
     if len(scores) >= 1:
         top = scores[0]
         top_score = top[score_field]
-        top_user = top['username']
+        top_user = top["username"]
 
         message += f"1. {top_score} - 👑 <b>{top_user}</b> 👑"
 
@@ -205,7 +205,7 @@ def leaderboard_handler(update: Update, context: CallbackContext) -> None:
             # Convert to correct numbering
             idx += 2
             score = entry[score_field]
-            user = entry['username']
+            user = entry["username"]
             message += f"\n{idx}. {score} - {user}"
     else:
         message += "<i>Empty...</i>"
@@ -226,9 +226,7 @@ def main() -> None:
 
     dispatcher = updater.dispatcher
 
-    dispatcher.add_handler(
-        CommandHandler("leaderboard", leaderboard_handler)
-    )
+    dispatcher.add_handler(CommandHandler("leaderboard", leaderboard_handler))
 
     dispatcher.add_handler(
         MessageHandler(
@@ -240,7 +238,6 @@ def main() -> None:
     dispatcher.add_handler(
         CommandHandler("stats", stats_handler, Filters.chat_type.private)
     )
-
 
     dispatcher.add_handler(
         CommandHandler("clear", clear_handler, Filters.chat_type.private)
