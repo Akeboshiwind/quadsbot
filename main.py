@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # Formats the date as a series of human readable numbers
 # 2020-10-22T12:51:24 -> 20201022125124
-# NOTE: I'm not sure if this will handle timezones nicely
+# NOTE: Must be in 24 -> 12 hour order for the check_id below
 format_strings = [
     "%Y%m%d%H%M%S",  # 24 hour
     "%Y%m%d%I%M%S",  # 12 hour
@@ -80,20 +80,25 @@ def check(dates: list[int], message_text: str) -> Tuple[State, Optional[str]]:
     message_text = message_text.lower()
 
     for (date_re, message_re) in matchers:
-        for date_digits in dates:
+        for date_idx, date_digits in enumerate(dates):
             date_match = re.search(date_re, date_digits)
             if date_match:
                 delete_message = False
                 if re.search(message_re, message_text):
-                    # Extract the prefix of the match
                     # The string upto the end of the match
-                    # This is useful for de-duping checks later on
                     date_prefix = message_text[: date_match.end()]
+
+                    # The id for this specific check
+                    # We use the date prefix to identify when the match happened
+                    # (it includes the match itself so we don't id other matches)
+                    # We use the index of the date_digits to differentiate between 24
+                    # and 12 hour dates
+                    check_id = date_prefix + str(date_idx)
 
                     # Return:
                     # - The message_re as a key
-                    # - The date prefix to help dedupe checks in the stats
-                    return State.CHECKED, (message_re, date_prefix)
+                    # - The check_id to help dedupe checks in the stats
+                    return State.CHECKED, (message_re, check_id)
 
     if delete_message:
         return State.DELETE, None
@@ -124,14 +129,14 @@ def message_handler(update: Update, context: CallbackContext) -> State:
         user_stats["checked_total"] += 1
 
         # Unpack check_info
-        (matcher, date_prefix) = check_info
+        (matcher, check_id) = check_info
 
         # Dedupe checks
         matched_prefixes = context.user_data.get(matcher, [])
-        if date_prefix not in matched_prefixes:
+        if check_id not in matched_prefixes:
             user_stats["checked_unique"] += 1
 
-            matched_prefixes.append(date_prefix)
+            matched_prefixes.append(check_id)
             context.user_data[matcher] = matched_prefixes
 
         logger.info(f"Checked `{dates}` with `{matcher}`")
