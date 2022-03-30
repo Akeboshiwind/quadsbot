@@ -98,11 +98,14 @@ def check(dates: list[int], message_text: str) -> Tuple[State, Optional[str]]:
                     # Return:
                     # - The message_re as a key
                     # - The check_id to help dedupe checks in the stats
+                    logger.info(f"Checked `{dates}` with `{message_text}` using `{message_re}`")
                     return State.CHECKED, (message_re, check_id)
 
     if delete_message:
+        logger.info(f"Deleted `{dates}` with `{message_text}`")
         return State.DELETE, None
     else:
+        logger.info(f"Passed `{dates}` with `{message_text}`")
         return State.PASS, None
 
 
@@ -112,6 +115,7 @@ def message_handler(update: Update, context: CallbackContext) -> State:
     """
     dates = get_date_strings(update.message.date)
     state, check_info = check(dates, update.message.text)
+    logger.info("Handling Message")
 
     user_stats = context.bot_data.get(
         update.message.from_user.id,
@@ -134,20 +138,18 @@ def message_handler(update: Update, context: CallbackContext) -> State:
         # Dedupe checks
         matched_prefixes = context.user_data.get(matcher, [])
         if check_id not in matched_prefixes:
+            logger.info("Check identified as unique")
             user_stats["checked_unique"] += 1
 
             matched_prefixes.append(check_id)
             context.user_data[matcher] = matched_prefixes
 
-        logger.info(f"Checked `{dates}` with `{matcher}`")
         update.message.reply_text("Checked", quote=True)
     elif state == State.DELETE:
         user_stats["deleted"] += 1
-        logger.info("Deleted Message")
         update.message.delete()
     elif state == State.PASS:
         user_stats["passed"] += 1
-        logger.info("Passed")
         pass
 
     user_stats["messages_total"] += 1
