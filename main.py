@@ -15,6 +15,7 @@ from telegram.ext import (
     PicklePersistence,
 )
 import pytz
+from datetime import datetime
 
 # Enable logging
 logging.basicConfig(
@@ -33,7 +34,7 @@ format_strings = [
 tz = pytz.timezone(os.environ.get("TZ", "Europe/London"))
 
 
-def get_date_strings(date) -> list[int]:
+def get_date_strings(date: datetime) -> list[int]:
     # Convert date to bot timezone
     date = date.astimezone(tz)
 
@@ -51,21 +52,31 @@ matchers = [
     (r"^......(.)\1{7}", "octs"),  # 2022-03-22T22:22:22
     (r"^....(.)\1{9}", "decs"),  # 2022-11-11T11:11:11
     (r"^..(.)\1{11}", "dodecs"),  # 2011-11-11T11:11:11
-    # TODO: Disable after april fools
+]
+
+# TODO: Remove after april fools
+joke_matchers = [
     (r"11235?8?(13)?", "fibs"),  # 2022-03-11T23:58:13
     (r"12345?", "incs"),  # 2022-03-11T23:45:31
-    (r"69}", "sixty nine"),  # Not possible I think?
+    (r"69", "sixty nine"),  # Not possible I think?
     (r"^........0420", r"(blaze it|blazeit)"),  # 2022-03-01T04:20:00
     (r"^........1337", r"(leet|l33t|1337)"),  # 2022-03-01T13:37:00
     (r"^........0230", r"(tooth hurty|ow)"),  # 2022-03-01T02:30:00
     (r"^........0002", r"(poop|poopie|number 2|no\. 2)"),  # 2022-03-01T00:02:00
     (r"^........0001", r"(peepee|pee pee|number 1|no\. 1)"),  # 2022-03-01T00:01:00
+    (r"^........0314", r"(pi|pie)"),  # 2022-03-01T03:14:00
 ]
 
 State = Enum("State", "DELETE PASS CHECKED")
 
 
-def check(date: int, message_text: str) -> Tuple[State, Optional[Tuple[str, str]]]:
+def isAprilFoolsDay(date: datetime) -> bool:
+    now = date.astimezone(tz)
+    return now.month == 4 and now.day == 1
+
+
+
+def check(date: datetime, message_text: str) -> Tuple[State, Optional[Tuple[str, str]]]:
     """
     Calculate what to do with the given message.
 
@@ -86,7 +97,11 @@ def check(date: int, message_text: str) -> Tuple[State, Optional[Tuple[str, str]
     dates = get_date_strings(date)
     message_text = message_text.lower()
 
-    for (date_re, message_re) in matchers:
+    more_matchers = matchers
+    if isAprilFoolsDay(date):
+        more_matchers += joke_matchers
+
+    for (date_re, message_re) in more_matchers:
         for date_idx, date_digits in enumerate(dates):
             date_match = re.search(date_re, date_digits)
             if date_match:
