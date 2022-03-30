@@ -199,7 +199,7 @@ def clear_handler(update: Update, context: CallbackContext) -> None:
     logger.info("/clear call")
     context.user_data.clear()
     context.bot_data.clear()
-    update.message.reply_text(f"\nStats: {json.dumps(context.bot_data)}")
+    update.message.reply_text(f"Stats: {json.dumps(context.bot_data)}")
 
 
 def leaderboard_handler(update: Update, context: CallbackContext) -> None:
