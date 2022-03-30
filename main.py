@@ -59,7 +59,7 @@ matchers = [
 State = Enum("State", "DELETE PASS CHECKED")
 
 
-def check(date: int, message_text: str) -> Tuple[State, Optional[str]]:
+def check(date: int, message_text: str) -> Tuple[State, Optional[Tuple[str, str]]]:
     """
     Calculate what to do with the given message.
 
