@@ -59,7 +59,7 @@ matchers = [
 State = Enum("State", "DELETE PASS CHECKED")
 
 
-def check(dates: list[int], message_text: str) -> Tuple[State, Optional[str]]:
+def check(date: int, message_text: str) -> Tuple[State, Optional[str]]:
     """
     Calculate what to do with the given message.
 
@@ -77,6 +77,7 @@ def check(dates: list[int], message_text: str) -> Tuple[State, Optional[str]]:
     """
     delete_message = True
 
+    dates = get_date_strings(date)
     message_text = message_text.lower()
 
     for (date_re, message_re) in matchers:
@@ -113,9 +114,8 @@ def message_handler(update: Update, context: CallbackContext) -> State:
     """
     Given a text message, plans what to do with it. Then executes that plan.
     """
-    dates = get_date_strings(update.message.date)
-    state, check_info = check(dates, update.message.text)
     logger.info("Handling Message")
+    state, check_info = check(update.message.date, update.message.text)
 
     user_stats = context.bot_data.get(
         update.message.from_user.id,
@@ -136,6 +136,7 @@ def message_handler(update: Update, context: CallbackContext) -> State:
         (matcher, check_id) = check_info
 
         # Dedupe checks
+        # We use the `user_data` as a temporary cache
         matched_prefixes = context.user_data.get(matcher, [])
         if check_id not in matched_prefixes:
             logger.info("Check identified as unique")
