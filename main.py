@@ -107,7 +107,7 @@ def check(date: datetime, message_text: str) -> Tuple[State, Optional[Tuple[str,
                 delete_message = False
                 if re.search(message_re, message_text):
                     # The string upto the end of the match
-                    date_prefix = message_text[: date_match.end()]
+                    date_prefix = date_digits[: date_match.end()]
 
                     # The id for this specific check
                     # We use the date prefix to identify when the match happened
