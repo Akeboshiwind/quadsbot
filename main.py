@@ -98,7 +98,7 @@ def check(date: datetime, message_text: str) -> Tuple[State, Optional[Tuple[str,
 
     more_matchers = matchers
     if isAprilFoolsDay(date):
-        more_matchers += joke_matchers
+        more_matchers = matchers + joke_matchers
 
     for (date_re, message_re) in more_matchers:
         for date_idx, date_digits in enumerate(dates):
