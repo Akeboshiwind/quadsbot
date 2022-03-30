@@ -215,9 +215,11 @@ def check_handler(update: Update, context: CallbackContext) -> None:
 
         try:
             date = datetime.strptime(maybe_date, "%Y-%m-%dT%H:%M:%S")
-        except ValueError as e:
-            logger.error("error", exc_info=True)
-            update.message.reply_text(f"Failed to parse date `{maybe_date}`")
+        except ValueError:
+            update.message.reply_text(
+                f"Failed to parse date `{maybe_date}`\n"
+                "Must be of format `%Y-%m-%dT%H:%M:%S`"
+            )
 
     state, check_info = check(date, update.message.text)
 
