@@ -202,6 +202,28 @@ def clear_handler(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(f"Stats: {json.dumps(context.bot_data)}")
 
 
+def check_handler(update: Update, context: CallbackContext) -> None:
+    """
+    Manually run check
+    """
+    logger.info("/check call")
+
+    date = update.message.date
+
+    if len(context.args) >= 1:
+        maybe_date = context.args[0]
+
+        try:
+            date = datetime.strptime(maybe_date, "%Y-%m-%dT%H:%M:%S")
+        except ValueError as e:
+            logger.error("error", exc_info=True)
+            update.message.reply_text(f"Failed to parse date `{maybe_date}`")
+
+    state, check_info = check(date, update.message.text)
+
+    update.message.reply_text(f"State: {state}\nCheck Info: {check_info}")
+
+
 def leaderboard_handler(update: Update, context: CallbackContext) -> None:
     """
     Display a leaderboard of scores
@@ -269,6 +291,10 @@ def main() -> None:
 
     dispatcher.add_handler(
         CommandHandler("clear", clear_handler, Filters.chat_type.private)
+    )
+
+    dispatcher.add_handler(
+        CommandHandler("check", check_handler, Filters.chat_type.private)
     )
 
     # Start the Bot
