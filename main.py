@@ -75,7 +75,6 @@ def isAprilFoolsDay(date: datetime) -> bool:
     return now.month == 4 and now.day == 1
 
 
-
 def check(date: datetime, message_text: str) -> Tuple[State, Optional[Tuple[str, str]]]:
     """
     Calculate what to do with the given message.
