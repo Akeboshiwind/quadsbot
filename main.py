@@ -53,7 +53,13 @@ matchers = [
     (r"^..(.)\1{11}", "dodecs"),  # 2011-11-11T11:11:11
     # TODO: Disable after april fools
     (r"11235?8?(13)?", "fibs"),  # 2022-03-11T23:58:13
-    (r"12345?6?7?", "incs"),  # 2022-03-11T23:45:67
+    (r"12345?", "incs"),  # 2022-03-11T23:45:31
+    (r"69}", "sixty nine"),  # Not possible I think?
+    (r"^........0420", r"(blaze it|blazeit)"),  # 2022-03-01T04:20:00
+    (r"^........1337", r"(leet|l33t|1337)"),  # 2022-03-01T13:37:00
+    (r"^........0230", r"(tooth hurty|ow)"),  # 2022-03-01T02:30:00
+    (r"^........0002", r"(poop|poopie|number 2|no\. 2)"),  # 2022-03-01T00:02:00
+    (r"^........0001", r"(peepee|pee pee|number 1|no\. 1)"),  # 2022-03-01T00:01:00
 ]
 
 State = Enum("State", "DELETE PASS CHECKED")
