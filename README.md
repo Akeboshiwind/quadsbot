@@ -17,6 +17,7 @@ $ poetry run python main.py
 - Replies with "Checked" to valid "quads" and "sexts" messages
 - If the bot has permissions to delete messages then all messages not sent on quads will be deleted
 - Has a `/leaderboard` command which keeps track of the amount of unique "checks" a user has
+- Set your own timezone by sending a live location
 
 ## Caveats
 
