@@ -75,7 +75,7 @@ def isAprilFoolsDay(date: datetime) -> bool:
     return now.month == 4 and now.day == 1
 
 
-def check(date: datetime, message_text: str) -> Tuple[State, Optional[Tuple[str, str]]]:
+def check(date: datetime, message_text: Optional[str]) -> Tuple[State, Optional[Tuple[str, str]]]:
     """
     Calculate what to do with the given message.
 
@@ -94,6 +94,8 @@ def check(date: datetime, message_text: str) -> Tuple[State, Optional[Tuple[str,
     delete_message = True
 
     dates = get_date_strings(date)
+    if not message_text:
+        message_text = ""
     message_text = message_text.lower()
 
     more_matchers = matchers
@@ -135,7 +137,7 @@ def message_handler(update: Update, context: CallbackContext) -> State:
     Given a text message, plans what to do with it. Then executes that plan.
     """
     logger.info("Handling Message")
-    state, check_info = check(update.message.date, update.message.text)
+    state, check_info = check(update.effective_message.date, update.effective_message.text)
 
     user_stats = context.bot_data.get(
         update.message.from_user.id,
@@ -281,13 +283,6 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("leaderboard", leaderboard_handler))
 
     dispatcher.add_handler(
-        MessageHandler(
-            Filters.text & ~Filters.update.edited_message & ~Filters.chat_type.private,
-            message_handler,
-        )
-    )
-
-    dispatcher.add_handler(
         CommandHandler("stats", stats_handler, Filters.chat_type.private)
     )
 
@@ -297,6 +292,13 @@ def main() -> None:
 
     dispatcher.add_handler(
         CommandHandler("check", check_handler, Filters.chat_type.private)
+    )
+
+    dispatcher.add_handler(
+        MessageHandler(
+            ~Filters.update.edited_message & ~Filters.chat_type.private,
+            message_handler,
+        )
     )
 
     # Start the Bot
