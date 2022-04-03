@@ -15,6 +15,7 @@ from telegram.ext import (
     PicklePersistence,
 )
 import pytz
+from timezonefinder import TimezoneFinder
 from datetime import datetime
 
 # Enable logging
@@ -31,12 +32,13 @@ format_strings = [
     "%Y%m%d%H%M%S",  # 24 hour
     "%Y%m%d%I%M%S",  # 12 hour
 ]
-tz = pytz.timezone(os.environ.get("TZ", "Europe/London"))
+default_tz = os.environ.get("TZ", "Europe/London")
+tzf = TimezoneFinder()
 
 
-def get_date_strings(date: datetime) -> list[int]:
+def get_date_strings(date: datetime, tz: str) -> list[int]:
     # Convert date to bot timezone
-    date = date.astimezone(tz)
+    date = date.astimezone(pytz.timezone(tz))
 
     return [date.strftime(format_string) for format_string in format_strings]
 
@@ -70,12 +72,12 @@ joke_matchers = [
 State = Enum("State", "DELETE PASS CHECKED")
 
 
-def isAprilFoolsDay(date: datetime) -> bool:
-    now = date.astimezone(tz)
+def isAprilFoolsDay(date: datetime, tz) -> bool:
+    now = date.astimezone(pytz.timezone(tz))
     return now.month == 4 and now.day == 1
 
 
-def check(date: datetime, message_text: Optional[str]) -> Tuple[State, Optional[Tuple[str, str]]]:
+def check(date: datetime, tz: str, message_text: Optional[str]) -> Tuple[State, Optional[Tuple[str, str]]]:
     """
     Calculate what to do with the given message.
 
@@ -93,13 +95,13 @@ def check(date: datetime, message_text: Optional[str]) -> Tuple[State, Optional[
     """
     delete_message = True
 
-    dates = get_date_strings(date)
+    dates = get_date_strings(date, tz)
     if not message_text:
         message_text = ""
     message_text = message_text.lower()
 
     more_matchers = matchers
-    if isAprilFoolsDay(date):
+    if isAprilFoolsDay(date, tz):
         more_matchers = matchers + joke_matchers
 
     for (date_re, message_re) in more_matchers:
@@ -137,9 +139,8 @@ def message_handler(update: Update, context: CallbackContext) -> State:
     Given a text message, plans what to do with it. Then executes that plan.
     """
     logger.info("Handling Message")
-    state, check_info = check(update.effective_message.date, update.effective_message.text)
 
-    user_stats = context.bot_data.get(
+    user_info = context.bot_data.get(
         update.message.from_user.id,
         {
             "username": update.effective_user.username,
@@ -148,11 +149,19 @@ def message_handler(update: Update, context: CallbackContext) -> State:
             "deleted": 0,
             "passed": 0,
             "messages_total": 0,
+            "tz": default_tz,
         },
     )
 
+    # Migrate users which don't have a timezone set
+    # TODO: Remove?
+    if not user_info.get("tz"):
+        user_info["tz"] = default_tz
+
+    state, check_info = check(update.effective_message.date, user_info["tz"], update.effective_message.text)
+
     if state == State.CHECKED:
-        user_stats["checked_total"] += 1
+        user_info["checked_total"] += 1
 
         # Unpack check_info
         (matcher, check_id) = check_info
@@ -162,23 +171,23 @@ def message_handler(update: Update, context: CallbackContext) -> State:
         matched_prefixes = context.user_data.get(matcher, [])
         if check_id not in matched_prefixes:
             logger.info("Check identified as unique")
-            user_stats["checked_unique"] += 1
+            user_info["checked_unique"] += 1
 
             matched_prefixes.append(check_id)
             context.user_data[matcher] = matched_prefixes
 
         update.message.reply_text("Checked", quote=True)
     elif state == State.DELETE:
-        user_stats["deleted"] += 1
+        user_info["deleted"] += 1
         update.message.delete()
     elif state == State.PASS:
-        user_stats["passed"] += 1
+        user_info["passed"] += 1
         pass
 
-    user_stats["messages_total"] += 1
-    user_stats["username"] = update.effective_user.username
+    user_info["messages_total"] += 1
+    user_info["username"] = update.effective_user.username
 
-    context.bot_data[update.message.from_user.id] = user_stats
+    context.bot_data[update.message.from_user.id] = user_info
 
     return state
 
@@ -188,8 +197,14 @@ def stats_handler(update: Update, context: CallbackContext) -> None:
     Given a text message, plans what to do with it. Then executes that plan.
     """
     logger.info("/stats call")
+
+    user_timezone = default_tz
+    if context.bot_data.get(update.message.from_user.id):
+        user_info = context.bot_data[update.message.from_user.id]
+        user_timezone = user_info.get("tz", default_tz)
+
     update.message.reply_text(
-        f"Date strings: {get_date_strings(update.message.date)}"
+        f"Date strings: {get_date_strings(update.message.date, user_timezone)}"
         f"\nStats: {json.dumps(context.bot_data)}"
     )
 
@@ -212,8 +227,16 @@ def check_handler(update: Update, context: CallbackContext) -> None:
 
     date = update.message.date
 
+    user_timezone = default_tz
+    if context.bot_data.get(update.message.from_user.id):
+        user_info = context.bot_data[update.message.from_user.id]
+        user_timezone = user_info.get("tz", default_tz)
+
     if len(context.args) >= 1:
         maybe_date = context.args[0]
+
+        if len(context.args) >= 2:
+            user_timezone = context.args[1]
 
         try:
             date = datetime.strptime(maybe_date, "%Y-%m-%dT%H:%M:%S")
@@ -223,9 +246,9 @@ def check_handler(update: Update, context: CallbackContext) -> None:
                 "Must be of format `%Y-%m-%dT%H:%M:%S`"
             )
 
-    state, check_info = check(date, update.message.text)
+    state, check_info = check(date, user_timezone, update.message.text)
 
-    update.message.reply_text(f"State: {state}\nCheck Info: {check_info}")
+    update.message.reply_text(f"TZ: {user_timezone}\nState: {state}\nCheck Info: {check_info}")
 
 
 def leaderboard_handler(update: Update, context: CallbackContext) -> None:
@@ -267,6 +290,55 @@ def leaderboard_handler(update: Update, context: CallbackContext) -> None:
     update.message.reply_html(message)
 
 
+def delete_message(context: CallbackContext) -> None:
+    logger.info("Deleting delayed message")
+
+    chat_id = context.job.context["chat_id"]
+    message_id = context.job.context["message_id"]
+    logger.info(f"Chat ID: {chat_id}")
+    logger.info(f"Message ID: {message_id}")
+
+    context.bot.delete_message(chat_id, message_id)
+
+
+def location_handler(update: Update, context: CallbackContext) -> None:
+    """
+    Handles locations
+    When a live location is sent, we want to set an override for the user's location
+    This will be used when working with dates in the bot
+    """
+    logger.info("Handling Location")
+
+    # Handle message like normal
+    # NOTE: We do this first to ensure that `bot_data` is setup correctly
+    #       The only issue with this method is that this message will be handled
+    #       incorrectly if the user is does this on quads in a different timezone
+    message_handler(update, context)
+
+    if update.message.location.live_period:
+        logger.info("Got Live Location")
+
+        # Calculate Timezone
+        latitude = update.message.location.latitude
+        longitude = update.message.location.longitude
+        user_timezone = tzf.timezone_at(lat=latitude, lng=longitude)
+
+        # Set the timezone in user_info
+        user_info = context.bot_data[update.message.from_user.id]
+        user_info['tz'] = user_timezone
+        context.bot_data[update.message.from_user.id] = user_info
+
+        # Send Confirmation & delete after 2 seconds
+        confirm_message = update.message.reply_text(f"Set your timezone to {user_timezone}")
+        context.job_queue.run_once(delete_message, 2, context={
+            "chat_id": confirm_message.chat_id,
+            "message_id": confirm_message.message_id,
+        })
+    else:
+        logger.info("Got Normal Location -- Doing nothing")
+
+
+
 def main() -> None:
     # Here we use persistence to store stats that we use to calculate the leaderboard
     # and debug
@@ -293,6 +365,8 @@ def main() -> None:
     dispatcher.add_handler(
         CommandHandler("check", check_handler, Filters.chat_type.private)
     )
+
+    dispatcher.add_handler(MessageHandler(Filters.location, location_handler))
 
     dispatcher.add_handler(
         MessageHandler(
