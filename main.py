@@ -329,7 +329,7 @@ def location_handler(update: Update, context: CallbackContext) -> None:
         context.bot_data[update.message.from_user.id] = user_info
 
         # Send Confirmation & delete after 2 seconds
-        confirm_message = update.message.reply_text(f"Set your timezone to {user_timezone}")
+        confirm_message = update.message.chat.send_message(f"Set your timezone to {user_timezone}")
         context.job_queue.run_once(delete_message, 2, context={
             "chat_id": confirm_message.chat_id,
             "message_id": confirm_message.message_id,
