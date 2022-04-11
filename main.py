@@ -153,11 +153,6 @@ def message_handler(update: Update, context: CallbackContext) -> State:
         },
     )
 
-    # Migrate users which don't have a timezone set
-    # TODO: Remove?
-    if not user_info.get("tz"):
-        user_info["tz"] = default_tz
-
     state, check_info = check(update.effective_message.date, user_info["tz"], update.effective_message.text)
 
     if state == State.CHECKED:
