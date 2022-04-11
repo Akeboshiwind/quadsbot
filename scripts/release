@@ -28,7 +28,8 @@ docker push "$image:latest"
 
 
 
-# >> Git Tag
+# >> Git Push and Tag
 
+git push
 git tag $version
 git push --tags
