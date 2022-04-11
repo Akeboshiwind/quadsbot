@@ -140,10 +140,17 @@ def message_handler(update: Update, context: CallbackContext) -> State:
     """
     logger.info("Handling Message")
 
+    # Work out the user's name
+    username = update.effective_user.username
+    if not username:
+        username = update.effective_user.first_name
+        if update.effective_user.last_name:
+            username += f" {update.effective_user.last_name}"
+
     user_info = context.bot_data.get(
         update.message.from_user.id,
         {
-            "username": update.effective_user.username,
+            "username": username,
             "checked_total": 0,
             "checked_unique": 0,
             "deleted": 0,
@@ -180,7 +187,7 @@ def message_handler(update: Update, context: CallbackContext) -> State:
         pass
 
     user_info["messages_total"] += 1
-    user_info["username"] = update.effective_user.username
+    user_info["username"] = username
 
     context.bot_data[update.message.from_user.id] = user_info
 
