@@ -1,2 +1,4 @@
 .ropeproject
 stats
+__pycache__
+*.pyc
