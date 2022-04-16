@@ -5,6 +5,8 @@ import json
 from enum import Enum
 from typing import Tuple, Optional
 
+from quadsbot.user import User
+
 from telegram import Update
 from telegram.ext import (
     Updater,
@@ -140,58 +142,39 @@ def message_handler(update: Update, context: CallbackContext) -> State:
     """
     logger.info("Handling Message")
 
-    # Work out the user's name
-    username = update.effective_user.username
-    if not username:
-        username = update.effective_user.first_name
-        if update.effective_user.last_name:
-            username += f" {update.effective_user.last_name}"
+    with User(update, context) as user_info:
+        state, check_info = check(
+            update.effective_message.date,
+            user_info["tz"],
+            update.effective_message.text
+        )
 
-    user_info = context.bot_data.get(
-        update.message.from_user.id,
-        {
-            "username": username,
-            "checked_total": 0,
-            "checked_unique": 0,
-            "deleted": 0,
-            "passed": 0,
-            "messages_total": 0,
-            "tz": default_tz,
-        },
-    )
+        if state == State.CHECKED:
+            user_info["checked_total"] += 1
 
-    state, check_info = check(update.effective_message.date, user_info["tz"], update.effective_message.text)
+            # Unpack check_info
+            (matcher, check_id) = check_info
 
-    if state == State.CHECKED:
-        user_info["checked_total"] += 1
+            # Dedupe checks
+            # We use the `user_data` as a temporary cache
+            matched_prefixes = context.user_data.get(matcher, [])
+            if check_id not in matched_prefixes:
+                logger.info("Check identified as unique")
+                user_info["checked_unique"] += 1
 
-        # Unpack check_info
-        (matcher, check_id) = check_info
+                matched_prefixes.append(check_id)
+                context.user_data[matcher] = matched_prefixes
 
-        # Dedupe checks
-        # We use the `user_data` as a temporary cache
-        matched_prefixes = context.user_data.get(matcher, [])
-        if check_id not in matched_prefixes:
-            logger.info("Check identified as unique")
-            user_info["checked_unique"] += 1
+            update.message.reply_text("Checked", quote=True)
+        elif state == State.DELETE:
+            user_info["deleted"] += 1
+            update.message.delete()
+        elif state == State.PASS:
+            user_info["passed"] += 1
+            pass
 
-            matched_prefixes.append(check_id)
-            context.user_data[matcher] = matched_prefixes
-
-        update.message.reply_text("Checked", quote=True)
-    elif state == State.DELETE:
-        user_info["deleted"] += 1
-        update.message.delete()
-    elif state == State.PASS:
-        user_info["passed"] += 1
-        pass
-
-    user_info["messages_total"] += 1
-    user_info["username"] = username
-
-    context.bot_data[update.message.from_user.id] = user_info
-
-    return state
+        user_info["messages_total"] += 1
+        return state
 
 
 def stats_handler(update: Update, context: CallbackContext) -> None:
@@ -200,15 +183,12 @@ def stats_handler(update: Update, context: CallbackContext) -> None:
     """
     logger.info("/stats call")
 
-    user_timezone = default_tz
-    if context.bot_data.get(update.message.from_user.id):
-        user_info = context.bot_data[update.message.from_user.id]
-        user_timezone = user_info.get("tz", default_tz)
-
-    update.message.reply_text(
-        f"Date strings: {get_date_strings(update.message.date, user_timezone)}"
-        f"\nStats: {json.dumps(context.bot_data)}"
-    )
+    with User(update, context) as user_info:
+        user_timezone = user_info["tz"]
+        update.message.reply_text(
+            f"Date strings: {get_date_strings(update.message.date, user_timezone)}"
+            f"\nStats: {json.dumps(context.bot_data)}"
+        )
 
 
 def clear_handler(update: Update, context: CallbackContext) -> None:
@@ -229,28 +209,31 @@ def check_handler(update: Update, context: CallbackContext) -> None:
 
     date = update.message.date
 
-    user_timezone = default_tz
-    if context.bot_data.get(update.message.from_user.id):
-        user_info = context.bot_data[update.message.from_user.id]
-        user_timezone = user_info.get("tz", default_tz)
+    with User(update, context) as user_info:
+        user_timezone = user_info["tz"]
 
-    if len(context.args) >= 1:
-        maybe_date = context.args[0]
+        # Let the user manually enter a date and timezone
+        # /check 2022-01-22T22:01:01 Europe/London quads
+        if len(context.args) >= 1:
+            maybe_date = context.args[0]
 
-        if len(context.args) >= 2:
-            user_timezone = context.args[1]
+            if len(context.args) >= 2:
+                user_timezone = context.args[1]
 
-        try:
-            date = datetime.strptime(maybe_date, "%Y-%m-%dT%H:%M:%S")
-        except ValueError:
-            update.message.reply_text(
-                f"Failed to parse date `{maybe_date}`\n"
-                "Must be of format `%Y-%m-%dT%H:%M:%S`"
-            )
+            try:
+                date = datetime.strptime(maybe_date, "%Y-%m-%dT%H:%M:%S")
+            except ValueError:
+                update.message.reply_text(
+                    f"Failed to parse date `{maybe_date}`\n"
+                    "Must be of format `%Y-%m-%dT%H:%M:%S`"
+                )
 
-    state, check_info = check(date, user_timezone, update.message.text)
+        state, check_info = check(date, user_timezone, update.message.text)
 
-    update.message.reply_text(f"TZ: {user_timezone}\nState: {state}\nCheck Info: {check_info}")
+        message = f"TZ: {user_timezone}"
+        message += f"\nState: {state}"
+        message += f"\nCheck Info: {check_info}"
+        update.message.reply_text(message)
 
 
 def leaderboard_handler(update: Update, context: CallbackContext) -> None:
@@ -319,12 +302,6 @@ def location_handler(update: Update, context: CallbackContext) -> None:
     """
     logger.info("Handling Location")
 
-    # Handle message like normal
-    # NOTE: We do this first to ensure that `bot_data` is setup correctly
-    #       The only issue with this method is that this message will be handled
-    #       incorrectly if the user is does this on quads in a different timezone
-    message_handler(update, context)
-
     if update.message.location.live_period:
         logger.info("Got Live Location")
 
@@ -334,12 +311,13 @@ def location_handler(update: Update, context: CallbackContext) -> None:
         user_timezone = tzf.timezone_at(lat=latitude, lng=longitude)
 
         # Set the timezone in user_info
-        user_info = context.bot_data[update.message.from_user.id]
-        user_info['tz'] = user_timezone
-        context.bot_data[update.message.from_user.id] = user_info
+        with User(update, context) as user_info:
+            user_info['tz'] = user_timezone
 
         # Send Confirmation & delete after 2 seconds
-        confirm_message = update.message.chat.send_message(f"Set your timezone to {user_timezone}")
+        confirm_message = update.message.chat.send_message(
+                f"Set your timezone to {user_timezone}"
+        )
         context.job_queue.run_once(delete_message, 2, context={
             "chat_id": confirm_message.chat_id,
             "message_id": confirm_message.message_id,
@@ -347,6 +325,8 @@ def location_handler(update: Update, context: CallbackContext) -> None:
     else:
         logger.info("Got Normal Location -- Doing nothing")
 
+        # Handle message like normal
+        message_handler(update, context)
 
 
 def main() -> None:
