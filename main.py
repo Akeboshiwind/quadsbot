@@ -322,6 +322,9 @@ def location_handler(update: Update, context: CallbackContext) -> None:
             "chat_id": confirm_message.chat_id,
             "message_id": confirm_message.message_id,
         })
+
+        # Always delete message
+        update.message.delete()
     else:
         logger.info("Got Normal Location -- Doing nothing")
 
