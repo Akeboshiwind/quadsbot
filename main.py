@@ -333,17 +333,23 @@ def location_handler(update: Update, context: CallbackContext) -> None:
 
 
 def main() -> None:
-    # Here we use persistence to store stats that we use to calculate the leaderboard
-    # and debug
-    # We don't store `user_data` as we want that to just be a temporary store for
-    # de-duping purposes
+    # >> Setup persistance
+
+    # Don't store `user_data`, we use it as a temporary store
     persistence_location = os.environ.get("PERSISTENCE_FILE", "/data/stats")
     persistence = PicklePersistence(
         filename=persistence_location, store_user_data=False
     )
-    updater = Updater(token=os.environ["TELEGRAM_BOT_TOKEN"], persistence=persistence)
 
+    # >> Setup the Bot
+
+    updater = Updater(
+        token=os.environ["TELEGRAM_BOT_TOKEN"],
+        persistence=persistence
+    )
     dispatcher = updater.dispatcher
+
+    # >> Command Hanlders
 
     dispatcher.add_handler(CommandHandler("leaderboard", leaderboard_handler))
 
@@ -359,7 +365,11 @@ def main() -> None:
         CommandHandler("check", check_handler, Filters.chat_type.private)
     )
 
+    # >> Location Handler
+
     dispatcher.add_handler(MessageHandler(Filters.location, location_handler))
+
+    # >> Default Message Handler
 
     dispatcher.add_handler(
         MessageHandler(
@@ -368,12 +378,9 @@ def main() -> None:
         )
     )
 
-    # Start the Bot
-    updater.start_polling()
+    # >> Start the Bot
 
-    # Block until the user presses Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
+    updater.start_polling()
     updater.idle()
 
 
