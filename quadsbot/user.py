@@ -1,7 +1,9 @@
+import os
+
 from telegram import Update
 from telegram.ext import CallbackContext
 
-default_tz = "Europe/London"
+default_tz = os.environ.get("TZ", "Europe/London")
 
 
 class User():
