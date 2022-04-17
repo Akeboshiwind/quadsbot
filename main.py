@@ -22,7 +22,7 @@ from datetime import datetime
 
 # Enable logging
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(levelname)-7s %(asctime)s %(name)s %(message)s", level=logging.INFO
 )
 
 # Formats the date as a series of human readable numbers
