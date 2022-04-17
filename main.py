@@ -25,8 +25,6 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
-logger = logging.getLogger(__name__)
-
 # Formats the date as a series of human readable numbers
 # 2020-10-22T12:51:24 -> 20201022125124
 # NOTE: Must be in 24 -> 12 hour order for the check_id below
@@ -125,14 +123,14 @@ def check(date: datetime, tz: str, message_text: Optional[str]) -> Tuple[State, 
                     # Return:
                     # - The message_re as a key
                     # - The check_id to help dedupe checks in the stats
-                    logger.info(f"Checked `{dates}` with `{message_text}` using `{message_re}`")
+                    logging.info(f"Checked `{dates}` with `{message_text}` using `{message_re}`")
                     return State.CHECKED, (message_re, check_id)
 
     if delete_message:
-        logger.info(f"Deleted `{dates}` with `{message_text}`")
+        logging.info(f"Deleted `{dates}` with `{message_text}`")
         return State.DELETE, None
     else:
-        logger.info(f"Passed `{dates}` with `{message_text}`")
+        logging.info(f"Passed `{dates}` with `{message_text}`")
         return State.PASS, None
 
 
@@ -140,7 +138,7 @@ def message_handler(update: Update, context: CallbackContext) -> State:
     """
     Given a text message, plans what to do with it. Then executes that plan.
     """
-    logger.info("Handling Message")
+    logging.info("Handling Message")
 
     with User(update, context) as user_info:
         state, check_info = check(
@@ -159,7 +157,7 @@ def message_handler(update: Update, context: CallbackContext) -> State:
             # We use the `user_data` as a temporary cache
             matched_prefixes = context.user_data.get(matcher, [])
             if check_id not in matched_prefixes:
-                logger.info("Check identified as unique")
+                logging.info("Check identified as unique")
                 user_info["checked_unique"] += 1
 
                 matched_prefixes.append(check_id)
@@ -181,7 +179,7 @@ def stats_handler(update: Update, context: CallbackContext) -> None:
     """
     Given a text message, plans what to do with it. Then executes that plan.
     """
-    logger.info("/stats call")
+    logging.info("/stats call")
 
     with User(update, context) as user_info:
         user_timezone = user_info["tz"]
@@ -195,7 +193,7 @@ def clear_handler(update: Update, context: CallbackContext) -> None:
     """
     Clears the stored stats
     """
-    logger.info("/clear call")
+    logging.info("/clear call")
     context.user_data.clear()
     context.bot_data.clear()
     update.message.reply_text(f"Stats: {json.dumps(context.bot_data)}")
@@ -205,7 +203,7 @@ def check_handler(update: Update, context: CallbackContext) -> None:
     """
     Manually run check
     """
-    logger.info("/check call")
+    logging.info("/check call")
 
     date = update.message.date
 
@@ -240,7 +238,7 @@ def leaderboard_handler(update: Update, context: CallbackContext) -> None:
     """
     Display a leaderboard of scores
     """
-    logger.info("/leaderboard call")
+    logging.info("/leaderboard call")
 
     if update.message.chat.type != "private":
         # Process the message as normal in a channel
@@ -284,12 +282,12 @@ def delete_message(context: CallbackContext) -> None:
         "message_id": 1234,
     }
     """
-    logger.info("Deleting delayed message")
+    logging.info("Deleting delayed message")
 
     chat_id = context.job.context["chat_id"]
     message_id = context.job.context["message_id"]
-    logger.info(f"Chat ID: {chat_id}")
-    logger.info(f"Message ID: {message_id}")
+    logging.info(f"Chat ID: {chat_id}")
+    logging.info(f"Message ID: {message_id}")
 
     context.bot.delete_message(chat_id, message_id)
 
@@ -300,10 +298,10 @@ def location_handler(update: Update, context: CallbackContext) -> None:
     When a live location is sent, we want to set an override for the user's location
     This will be used when working with dates in the bot
     """
-    logger.info("Handling Location")
+    logging.info("Handling Location")
 
     if update.message.location.live_period:
-        logger.info("Got Live Location")
+        logging.info("Got Live Location")
 
         # Calculate Timezone
         latitude = update.message.location.latitude
@@ -326,7 +324,7 @@ def location_handler(update: Update, context: CallbackContext) -> None:
         # Always delete message
         update.message.delete()
     else:
-        logger.info("Got Normal Location -- Doing nothing")
+        logging.info("Got Normal Location -- Doing nothing")
 
         # Handle message like normal
         message_handler(update, context)
