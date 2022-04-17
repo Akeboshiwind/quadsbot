@@ -1,5 +1,6 @@
 import logging
 import json
+import importlib.metadata
 
 from telegram import Update
 from telegram.ext import CallbackContext
@@ -16,7 +17,9 @@ def stats_handler(update: Update, context: CallbackContext) -> None:
 
     with User(update, context) as user_info:
         user_timezone = user_info["tz"]
+        version = importlib.metadata.version("quadsbot")
         update.message.reply_text(
-            f"Date strings: {get_date_strings(update.message.date, user_timezone)}"
+            f"Version: {version}"
+            f"\nDate strings: {get_date_strings(update.message.date, user_timezone)}"
             f"\nStats: {json.dumps(context.bot_data)}"
         )
