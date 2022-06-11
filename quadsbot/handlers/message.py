@@ -9,6 +9,7 @@ from telegram.ext import CallbackContext
 
 from quadsbot.date_utils import get_date_strings, is_april_fools_day
 from quadsbot.user import User
+from quadsbot.message_utils import delete_message
 
 # A list of tuples
 # The first value is a regex matcher for the above time format
@@ -128,7 +129,10 @@ def message_handler(update: Update, context: CallbackContext) -> State:
             update.message.reply_text("Checked", quote=True)
         elif state == State.DELETE:
             user_info["deleted"] += 1
-            update.message.delete()
+            context.job_queue.run_once(delete_message, 2, context={
+                "chat_id": update.message.chat_id,
+                "message_id": update.message.message_id,
+            })
         elif state == State.PASS:
             user_info["passed"] += 1
             pass
