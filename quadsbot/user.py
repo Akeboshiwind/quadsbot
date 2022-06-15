@@ -25,13 +25,18 @@ class User():
         # Because we're basically a wrapper around bot_data, store the bot_data
         # and user_id
         self._bot_data = context.bot_data
-        self._user_id = update.effective_message.from_user.id
+
+        # If the message was forwarded use the forwarded user
+        if update.effective_message.forward_from:
+            user = update.effective_message.forward_from
+        else:
+            user = update.effective_message.from_user
+        self._user_id = user.id
 
         # Get the currently stored user_info
         user_info = self._bot_data.get(self._user_id, {})
 
         # Always update username
-        user = update.effective_user
         username = user.username
         if not username:
             username = user.first_name
