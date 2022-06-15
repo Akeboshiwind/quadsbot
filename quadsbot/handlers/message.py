@@ -108,15 +108,15 @@ def calculate_forwarded_state(message_state: State, forward_state: State) -> Sta
     """
 
     state_transform = {
-        # message_state|forward_state  |output state
-        (State.CHECKED, State.CHECKED): State.CHECKED,
-        (State.CHECKED, State.DELETE):  State.PASS,
-        (State.DELETE,  State.CHECKED): State.CHECK_THEN_DELETE,
-        (State.DELETE,  State.DELETE):  State.DELETE,
-        (State.PASS,    State.PASS):    State.PASS,
-        (State.PASS,    State.DELETE):  State.PASS,
-        (State.DELETE,  State.PASS):    State.DELETE,
-        (State.DELETE,  State.DELETE):  State.DELETE,
+        # message_state | forward_state | output state
+        (State.CHECKED,   State.CHECKED): State.CHECKED,
+        (State.CHECKED,   State.DELETE):  State.PASS,
+        (State.DELETE,    State.CHECKED): State.CHECK_THEN_DELETE,
+        (State.DELETE,    State.DELETE):  State.DELETE,
+        (State.PASS,      State.PASS):    State.PASS,
+        (State.PASS,      State.DELETE):  State.PASS,
+        (State.DELETE,    State.PASS):    State.DELETE,
+        (State.DELETE,    State.DELETE):  State.DELETE,
     }
 
     return state_transform[(message_state, forward_state)]
