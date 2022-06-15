@@ -37,7 +37,7 @@ joke_matchers = [
     (r"^........0314", r"(pi|pie)"),  # 2022-03-01T03:14:00
 ]
 
-State = Enum("State", "DELETE PASS CHECKED")
+State = Enum("State", "DELETE PASS CHECKED CHECK_THEN_DELETE")
 
 
 def check(date: datetime, tz: str, message_text: Optional[str]) -> Tuple[State, Optional[Tuple[str, str]]]:
@@ -97,6 +97,30 @@ def check(date: datetime, tz: str, message_text: Optional[str]) -> Tuple[State, 
         return State.PASS, None
 
 
+def calculate_forwarded_state(message_state: State, forward_state: State) -> State:
+    """
+    It turns out that we need some custom logic so that forwarded messages handle how we expect.
+    See: https://github.com/Akeboshiwind/quadsbot/issues/6
+
+    message_state: The state using the time the bot recieved the message
+    forward_state: The state using the time the message was originally sent
+    """
+
+    state_transform = {
+        # message_state|forward_state  |output state
+        (State.CHECKED, State.CHECKED): State.CHECKED,
+        (State.CHECKED, State.DELETE):  State.PASS,
+        (State.DELETE,  State.CHECKED): State.CHECK_THEN_DELETE,
+        (State.DELETE,  State.DELETE):  State.DELETE,
+        (State.PASS,    State.PASS):    State.PASS,
+        (State.PASS,    State.DELETE):  State.PASS,
+        (State.DELETE,  State.PASS):    State.DELETE,
+        (State.DELETE,  State.DELETE):  State.DELETE,
+    }
+
+    return state_transform[(message_state, forward_state)]
+
+
 def message_handler(update: Update, context: CallbackContext) -> State:
     """
     Given a text message, plans what to do with it. Then executes that plan.
@@ -104,11 +128,32 @@ def message_handler(update: Update, context: CallbackContext) -> State:
     logging.info("Handling Message")
 
     with User(update, context) as user_info:
-        state, check_info = check(
-            update.effective_message.date,
-            user_info["tz"],
-            update.effective_message.text
-        )
+        is_forwarded = update.effective_message.forward_date is not None
+        if is_forwarded:
+            logging.info("Detected Forwarded Message")
+            logging.info("Current message check:")
+            message_state, _ = check(
+                update.effective_message.date,
+                user_info["tz"],
+                update.effective_message.text
+            )
+
+            # NOTE: We want the check_info using the time the message was originally sent
+            logging.info("Original message check:")
+            forward_state, check_info = check(
+                update.effective_message.forward_date,
+                user_info["tz"],
+                update.effective_message.text
+            )
+
+            state = calculate_forwarded_state(message_state, forward_state)
+            logging.info(f"Calculated State: {state}")
+        else:
+            state, check_info = check(
+                update.effective_message.date,
+                user_info["tz"],
+                update.effective_message.text
+            )
 
         if state == State.CHECKED:
             user_info["checked_total"] += 1
@@ -129,6 +174,26 @@ def message_handler(update: Update, context: CallbackContext) -> State:
             update.message.reply_text("Checked", quote=True)
         elif state == State.DELETE:
             user_info["deleted"] += 1
+            context.job_queue.run_once(delete_message, 2, context={
+                "chat_id": update.message.chat_id,
+                "message_id": update.message.message_id,
+            })
+        elif state == State.CHECK_THEN_DELETE:
+            user_info["checked_total"] += 1
+
+            # Unpack check_info
+            (matcher, check_id) = check_info
+
+            # Dedupe checks
+            # We use the `user_data` as a temporary cache
+            matched_prefixes = context.user_data.get(matcher, [])
+            if check_id not in matched_prefixes:
+                logging.info("Check identified as unique")
+                user_info["checked_unique"] += 1
+
+                matched_prefixes.append(check_id)
+                context.user_data[matcher] = matched_prefixes
+
             context.job_queue.run_once(delete_message, 2, context={
                 "chat_id": update.message.chat_id,
                 "message_id": update.message.message_id,

@@ -47,7 +47,7 @@ def leaderboard_handler(update: Update, context: CallbackContext) -> None:
         state = message_handler(update, context)
 
         # Only output the leaderboard if the messages wouldn't be deleted
-        if state == State.DELETE:
+        if state in [State.DELETE, State.CHECK_THEN_DELETE]:
             return
 
     # Reply with the leaderboard
