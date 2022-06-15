@@ -86,7 +86,8 @@ def check(date: datetime, tz: str, message_text: Optional[str]) -> Tuple[State, 
                     # Return:
                     # - The message_re as a key
                     # - The check_id to help dedupe checks in the stats
-                    logging.info(f"Checked `{dates}` with `{message_text}` using `{message_re}`")
+                    logging.info(
+                        f"Checked `{dates}` with `{message_text}` using `{message_re}`")
                     return State.CHECKED, (message_re, check_id)
 
     if delete_message:
