@@ -171,6 +171,7 @@ def message_handler(update: Update, context: CallbackContext) -> State:
             if state == State.CHECKED:
                 update.message.reply_text("Checked", quote=True)
             elif state == State.CHECK_THEN_DELETE:
+                user_info["deleted"] += 1
                 context.job_queue.run_once(delete_message, 2, context={
                     "chat_id": update.message.chat_id,
                     "message_id": update.message.message_id,
