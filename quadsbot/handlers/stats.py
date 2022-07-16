@@ -35,5 +35,5 @@ def stats_handler(update: Update, context: CallbackContext) -> None:
         update.message.reply_text(
             f"Version: {version()}"
             f"\nDate strings: {get_date_strings(update.message.date, user_timezone)}"
-            f"\nStats: {json.dumps(context.bot_data)}"
+            f"\nStats: {json.dumps(context.bot_data, indent=4, sort_keys=True)}"
         )
