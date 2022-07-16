@@ -156,7 +156,7 @@ def message_handler(update: Update, context: CallbackContext) -> State:
                 update.effective_message.text
             )
 
-        if state == State.CHECKED:
+        if state == State.CHECKED or state == State.CHECK_THEN_DELETE:
             user_info["checked_total"] += 1
 
             # Unpack check_info
@@ -172,29 +172,15 @@ def message_handler(update: Update, context: CallbackContext) -> State:
                 matched_prefixes.append(check_id)
                 context.user_data[matcher] = matched_prefixes
 
-            update.message.reply_text("Checked", quote=True)
+            if state == State.CHECKED:
+                update.message.reply_text("Checked", quote=True)
+            elif state == State.CHECK_THEN_DELETE:
+                context.job_queue.run_once(delete_message, 2, context={
+                    "chat_id": update.message.chat_id,
+                    "message_id": update.message.message_id,
+                })
         elif state == State.DELETE:
             user_info["deleted"] += 1
-            context.job_queue.run_once(delete_message, 2, context={
-                "chat_id": update.message.chat_id,
-                "message_id": update.message.message_id,
-            })
-        elif state == State.CHECK_THEN_DELETE:
-            user_info["checked_total"] += 1
-
-            # Unpack check_info
-            (matcher, check_id) = check_info
-
-            # Dedupe checks
-            # We use the `user_data` as a temporary cache
-            matched_prefixes = context.user_data.get(matcher, [])
-            if check_id not in matched_prefixes:
-                logging.info("Check identified as unique")
-                user_info["checked_unique"] += 1
-
-                matched_prefixes.append(check_id)
-                context.user_data[matcher] = matched_prefixes
-
             context.job_queue.run_once(delete_message, 2, context={
                 "chat_id": update.message.chat_id,
                 "message_id": update.message.message_id,
