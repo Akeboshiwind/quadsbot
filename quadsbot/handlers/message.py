@@ -126,9 +126,9 @@ def message_handler(update: Update, context: CallbackContext) -> State:
     """
     Given a text message, plans what to do with it. Then executes that plan.
     """
-    logging.info("Handling Message")
-
     with User(update, context) as user_info:
+        logging.info(f"Handling Message from {user_info['username']}")
+
         is_forwarded = update.effective_message.forward_date is not None
         if is_forwarded:
             logging.info("Detected Forwarded Message")
