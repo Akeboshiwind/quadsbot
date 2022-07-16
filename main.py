@@ -25,11 +25,8 @@ logging.basicConfig(
 def main() -> None:
     # >> Setup persistance
 
-    # Don't store `user_data`, we use it as a temporary store
     persistence_location = os.environ.get("PERSISTENCE_FILE", "/data/stats")
-    persistence = PicklePersistence(
-        filename=persistence_location, store_user_data=False
-    )
+    persistence = PicklePersistence(filename=persistence_location)
 
     # >> Setup the Bot
 
