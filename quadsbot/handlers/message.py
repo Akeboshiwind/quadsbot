@@ -163,15 +163,11 @@ def message_handler(update: Update, context: CallbackContext) -> State:
             (matcher, check_id) = check_info
 
             # Dedupe checks
-            # We use the `user_data` as a temporary cache
-            matched_prefixes = context.user_data.get(matcher, [])
-            if check_id not in matched_prefixes:
+            if check_id not in user_info["check_id_cache"]:
                 logging.info("Check identified as unique")
                 user_info["checked_unique"] += 1
 
-                matched_prefixes.append(check_id)
-                context.user_data[matcher] = matched_prefixes
-
+                user_info["check_id_cache"].append(check_id)
             if state == State.CHECKED:
                 update.message.reply_text("Checked", quote=True)
             elif state == State.CHECK_THEN_DELETE:

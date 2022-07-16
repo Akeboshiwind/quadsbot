@@ -52,6 +52,7 @@ class User():
         user_info.setdefault("passed", 0)
         user_info.setdefault("messages_total", 0)
         user_info.setdefault("tz", default_tz)
+        user_info.setdefault("check_id_cache", [])
 
         # Update the stored user_info
         self._bot_data[self._user_id] = user_info
@@ -63,4 +64,8 @@ class User():
         return self.user_info
 
     def __exit__(self, type, value, traceback):
+        # Limit size of the check_id_cache for memory usage
+        self.user_info["check_id_cache"] = self.user_info["check_id_cache"][-10:]
+
+        # Update the stored user_info
         self._bot_data[self._user_id] = self.user_info
