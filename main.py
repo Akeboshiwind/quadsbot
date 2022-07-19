@@ -30,11 +30,29 @@ def main() -> None:
 
     # >> Setup the Bot
 
-    updater = Updater(
-        token=os.environ["TELEGRAM_BOT_TOKEN"],
-        persistence=persistence
-    )
+    updater = Updater(token=os.environ["TELEGRAM_BOT_TOKEN"], persistence=persistence)
     dispatcher = updater.dispatcher
+
+    # >> Handle bot_data migration
+    # The previous version used the entire bot_data dict to store the user
+    # stats. We want this to be under a sub_key so we can store other things
+    # too.
+
+    if "user_stats" not in dispatcher.bot_data:
+        print("Running migration")
+
+        import copy
+
+        stats = copy.deepcopy(dispatcher.bot_data)
+        dispatcher.bot_data.clear()
+        dispatcher.bot_data["user_stats"] = stats
+        dispatcher.update_persistence()
+
+    # >> Setup bot_data
+
+    if "user_stats" not in dispatcher.bot_data:
+        dispatcher.bot_data.setdefault("user_stats", {})
+        dispatcher.update_persistence()
 
     # >> Command Hanlders
 

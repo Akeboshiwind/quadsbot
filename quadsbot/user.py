@@ -6,7 +6,7 @@ from telegram.ext import CallbackContext
 default_tz = os.environ.get("TZ", "Europe/London")
 
 
-class User():
+class User:
     """
     A ContextManager that:
     - Set's up the defaults of the user data
@@ -22,9 +22,9 @@ class User():
     """
 
     def __init__(self, update: Update, context: CallbackContext):
-        # Because we're basically a wrapper around bot_data, store the bot_data
-        # and user_id
-        self._bot_data = context.bot_data
+        # Because we're basically a wrapper around bot_data["user_stats"],
+        # store a reference to bot_data["user_stats"] and the user_id
+        self._user_stats = context.bot_data["user_stats"]
 
         # If the message was forwarded use the forwarded user
         if update.effective_message.forward_from:
@@ -34,7 +34,7 @@ class User():
         self._user_id = user.id
 
         # Get the currently stored user_info
-        user_info = self._bot_data.get(self._user_id, {})
+        user_info = self._user_stats.get(self._user_id, {})
 
         # Always update username
         username = user.username
@@ -55,7 +55,7 @@ class User():
         user_info.setdefault("check_id_cache", [])
 
         # Update the stored user_info
-        self._bot_data[self._user_id] = user_info
+        self._user_stats[self._user_id] = user_info
 
         # Store a reference to the object we'll give to the user
         self.user_info = user_info
@@ -68,4 +68,4 @@ class User():
         self.user_info["check_id_cache"] = self.user_info["check_id_cache"][-10:]
 
         # Update the stored user_info
-        self._bot_data[self._user_id] = self.user_info
+        self._user_stats[self._user_id] = self.user_info

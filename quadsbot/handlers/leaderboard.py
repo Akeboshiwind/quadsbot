@@ -6,10 +6,10 @@ from telegram.ext import CallbackContext
 from quadsbot.handlers.message import message_handler, State
 
 
-def leaderboard(bot_data) -> str:
+def leaderboard(user_stats) -> str:
     # Get user objects, sorted by score
     score_field = "checked_unique"
-    scores = [score for _, score in bot_data.items()]
+    scores = [score for _, score in user_stats.items()]
     scores = sorted(scores, key=lambda s: s[score_field], reverse=True)
 
     # Create message w/ Header
@@ -51,5 +51,5 @@ def leaderboard_handler(update: Update, context: CallbackContext) -> None:
             return
 
     # Reply with the leaderboard
-    message = leaderboard(context.bot_data)
+    message = leaderboard(context.bot_data["user_stats"])
     update.message.reply_html(message)

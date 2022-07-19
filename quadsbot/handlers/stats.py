@@ -26,14 +26,16 @@ def version() -> str:
 
 def stats_handler(update: Update, context: CallbackContext) -> None:
     """
-    Given a text message, plans what to do with it. Then executes that plan.
+    Output some stats
     """
     logging.info("/stats call")
 
     with User(update, context) as user_info:
         user_timezone = user_info["tz"]
+        date_strings = get_date_strings(update.message.date, user_timezone)
+        bot_data = json.dumps(context.bot_data, indent=4, sort_keys=True)
         update.message.reply_text(
             f"Version: {version()}"
-            f"\nDate strings: {get_date_strings(update.message.date, user_timezone)}"
-            f"\nStats: {json.dumps(context.bot_data, indent=4, sort_keys=True)}"
+            f"\nDate strings: {date_strings}"
+            f"\nBot Data: {bot_data}"
         )
