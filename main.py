@@ -74,7 +74,7 @@ def main() -> None:
         allow_empty=True,
     )
 
-    # >> Command Hanlders
+    # >> Admin Command Hanlders
 
     setadmin_handler = make_setadmin_handler(admin_filter)
     dispatcher.add_handler(
@@ -84,8 +84,6 @@ def main() -> None:
             Filters.chat_type.private & admin_filter,
         )
     )
-
-    dispatcher.add_handler(CommandHandler("leaderboard", leaderboard_handler))
 
     dispatcher.add_handler(
         CommandHandler("stats", stats_handler, Filters.chat_type.private & admin_filter)
@@ -98,6 +96,10 @@ def main() -> None:
     dispatcher.add_handler(
         CommandHandler("check", check_handler, Filters.chat_type.private & admin_filter)
     )
+
+    # >> User Command Handlers
+
+    dispatcher.add_handler(CommandHandler("leaderboard", leaderboard_handler))
 
     # >> Location Handler
 
