@@ -2,6 +2,7 @@ import logging
 import os
 
 from quadsbot.handlers.leaderboard import leaderboard_handler
+from quadsbot.handlers.setadmin import make_setadmin_handler
 from quadsbot.handlers.stats import stats_handler
 from quadsbot.handlers.clear import clear_handler
 from quadsbot.handlers.check import check_handler
@@ -34,6 +35,7 @@ def main() -> None:
     dispatcher = updater.dispatcher
 
     # >> Handle bot_data migration
+    # TODO: Remove
     # The previous version used the entire bot_data dict to store the user
     # stats. We want this to be under a sub_key so we can store other things
     # too.
@@ -50,24 +52,51 @@ def main() -> None:
 
     # >> Setup bot_data
 
-    if "user_stats" not in dispatcher.bot_data:
-        dispatcher.bot_data.setdefault("user_stats", {})
+    bot_data_defaults = {
+        "user_stats": {},
+        "admin_id": None,
+    }
+
+    should_update_persistence = False
+    for key, default in bot_data_defaults.items():
+        if key not in dispatcher.bot_data:
+            dispatcher.bot_data.setdefault(key, default)
+            should_update_persistence = True
+
+    if should_update_persistence:
         dispatcher.update_persistence()
 
+    # >> Create the list of admin users
+
+    admin_filter = Filters.user(
+        user_id=dispatcher.bot_data["admin_id"],
+        # If no admin is set then allow anyone
+        allow_empty=True,
+    )
+
     # >> Command Hanlders
+
+    setadmin_handler = make_setadmin_handler(admin_filter)
+    dispatcher.add_handler(
+        CommandHandler(
+            "setadmin",
+            setadmin_handler,
+            Filters.chat_type.private & admin_filter,
+        )
+    )
 
     dispatcher.add_handler(CommandHandler("leaderboard", leaderboard_handler))
 
     dispatcher.add_handler(
-        CommandHandler("stats", stats_handler, Filters.chat_type.private)
+        CommandHandler("stats", stats_handler, Filters.chat_type.private & admin_filter)
     )
 
     dispatcher.add_handler(
-        CommandHandler("clear", clear_handler, Filters.chat_type.private)
+        CommandHandler("clear", clear_handler, Filters.chat_type.private & admin_filter)
     )
 
     dispatcher.add_handler(
-        CommandHandler("check", check_handler, Filters.chat_type.private)
+        CommandHandler("check", check_handler, Filters.chat_type.private & admin_filter)
     )
 
     # >> Location Handler
