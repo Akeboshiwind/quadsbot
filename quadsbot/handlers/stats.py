@@ -34,8 +34,11 @@ def stats_handler(update: Update, context: CallbackContext) -> None:
         user_timezone = user_info["tz"]
         date_strings = get_date_strings(update.message.date, user_timezone)
         bot_data = json.dumps(context.bot_data, indent=4, sort_keys=True)
-        update.message.reply_text(
-            f"Version: {version()}"
-            f"\nDate strings: {date_strings}"
-            f"\nBot Data: {bot_data}"
-        )
+
+        message_text = f"Version: {version()}"
+        message_text += f"\nDate strings: {date_strings}"
+        message_text += f"\nBot Data: {bot_data}"
+
+        msgs = [message_text[i : i + 4096] for i in range(0, len(message_text), 4096)]
+        for text in msgs:
+            update.message.reply_text(text)
